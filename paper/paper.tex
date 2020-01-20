@@ -1,4 +1,5 @@
-\documentclass[a4paper, twocolumn]{article}
+%\documentclass[a4paper, twocolumn]{article}
+\documentclass[a4paper]{article}
 \newcommand{\papertitle}{Whitepaper}
 
 \usepackage[a4paper, margin=2cm]{geometry}
@@ -9,6 +10,7 @@
 \usepackage[english]{babel}
 \usepackage[colorlinks=true,urlcolor=red]{hyperref}
 \usepackage{url}
+\usepackage{float}
 \usepackage{cleveref}
 \usepackage{todonotes}
 
@@ -142,7 +144,7 @@ Those simple examples are here to demonstrate that, once we have the complete kn
 
 \begin{itemize}
 
-\item The user does not have to worry about the architecture that the workflow will use, removing from the specialist the decision-making process; Andy
+\item The user does not have to worry about the architecture that the workflow will use, removing from the specialist the decision-making process; and
 
 \item The workflow will be optimised for the specific workflow without extra input from the user and the resources will, then, be better utilised.
 
@@ -180,42 +182,104 @@ Now, comes the question. Assuming the information is available, who will be resp
 
 This paper intends to describe the information required for the user to run the tools employed in this extended workflow: Cylc (Section ), DDN IME (Section ), and ESDM Scheduler (Section ).
 
-\subsection{Workflow Description}
-\subsection{Task Definition}
-\subsection{Heterogeneous Infrastructure}
+\section{Nice Pictures (or not!)}
 
-\section{Challenges and Limitations}
-\label{sec:challenges}
-\paragraph{Low-level interfaces:}
-\paragraph{Explicit workflows:}
-\paragraph{Suboptimal Storage Tiering:}
-\paragraph{Task and data equality:}
-\paragraph{Manual optimization:}
-\paragraph{Access pattern intransparency:}
+Consider the Cylc suite configuration for a toy monthly cycling workflow: a warm-cycled atmospheric model (model) is followed by postprocessing (post), forecast verification (ver), and product generation (prod) tasks \ref{Cylc}. This suite presents the dependencies among the tasks, but it is missing the information about I/O and storage. The decision about where the data with be stored is usually made by the developers in stages prior to Cylc and then it is incorporated into the Cylc process. The decisions about storage have to be made taking into consideration the architecture in which the workflow will run. Applied scientists should not spent time understanding hardware characteristics, but using their time to develop their work, let the computer do the job the simplest way possible, and just collect and analyse the results. However, nowadays, to be able to run a job in a HPC environment, researchers have to have a profound knowledge about their workflow, which is expected, but also about decisions regarding storage, communication, and computing.
 
-\section{NGI Vision}
-\label{sec:ngiVision}
+We propose an approach to reduce the burden on researchers and, at the same time, optimise the decisions about jobs running in HPC systems. Once we have an automated decision about where the job will run and how the storage will be managed, the scientists can the run their workflows in any machine without further interactions and even without previous knowledge about the machine architecture.
 
-\subsection{User Perspective}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\columnwidth]{cylc}
+  \caption{Toy Example Workflow}
+  \label{fig:cylc}
+\end{figure}
 
-\newcommand{\bnf}[1]{\textless #1\textgreater}
+Consider one cycle of the workflow, as shown in Figure \ref{fig:cylc-1}. The tasks dependencies are represented by the arrows, but there is no information about the data that are generated. Tasks \texttt{ver} and \texttt{post} depend on Task \texttt{model}, but does Task \texttt{model} needs to be fully completed to satisfy the dependency? Of course once Task \texttt{model} is completed, then Tasks \texttt{ver} and \texttt{post} can proceed, and that is the information Cylc has to create and reproduce the workflow.
 
-\paragraph{Data model:}
-\paragraph{Namespace:}
-\paragraph{Workflow specification:}
-\paragraph{Behavioral contracts:}
-\paragraph{Prescriptive analysis:}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.4\columnwidth]{cylc-1}
+  \caption{First Stage Workflow}
+  \label{fig:cylc-1}
+\end{figure}
 
-\subsection{System Perspective}
+Assume, now, we have the scenario introduced in Figure \ref{fig:cylc-io-model-2}. In this case, we have extra information indicating why Tasks \texttt{ver} and \texttt{post} depend on Task \texttt{model}. In fact, the dependency is not to the complete task, but of some datasets produced by Task \texttt{model}. If this information is available a priori, then we can use it to start Task \texttt{ver} once we have the dataset \texttt{I/O 1} and start Task \texttt{post} once we have the dataset \texttt{I/O 3}, making the general process faster. Still considering this small example, we can assume that dataset \texttt{I/O 2} will not be used for other tasks. So this data can be stored in a "slow" storage or iot can even be deleted.
 
-\paragraph{Awareness:}
-\paragraph{Resource management:}
-\paragraph{Liquid computing:}
-\paragraph{Smart scheduling:}
-\paragraph{Extensible ecosystem:}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\columnwidth]{cylc-io-model-2}
+  \caption{First Stage Workflow}
+  \label{fig:cylc-io-model-2}
+\end{figure}
 
-\section{Conclusions}
-\label{sec:conclusions}
+Aggregating the information about the datasets produced by every task, we can think about Tasks \texttt{ver}, \texttt{post}, and \texttt{model} as something as depicted in Table \ref{tab:cylc}.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+  \includegraphics[width=0.3\columnwidth]{cylc-io-model} &
+  \includegraphics[width=0.3\columnwidth]{cylc-io-post} &
+  \includegraphics[width=0.3\columnwidth]{cylc-io-prod} \\
+  \hline
+\end{tabular}
+\caption{I/O Information}
+\label{tab:cylc}
+\end{table}
+
+Therefore, the cycle presented in Figure \ref{fig:cylc-1} becomes the extended cycle now introduced in Figure \ref{fig:cylc-io}. In this picture now we keep the tasks dependencies, we explicit the datasets dependencies regarding the tasks that generated them, but not the dependencies among the datasets and the next texts. The idea here is to embrance the concept that tasks dependencies are really datasets dependencies, and once we can insert the datasets explicitly in the workflow, it is easier to see that there are many optimisations that can be made.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.4\columnwidth]{cylc-io}
+  \caption{Example High-Level Workflow}
+  \label{fig:cylc-io}
+\end{figure}
+
+The trick part when we consider only the Tasks and not the datasets in the workflow is that it may lead to the false impression that the Tasks only depend on the immediate previous one. For that, we have an example in Figure \ref{fig:cylc-io-model-3} showing that Task \texttt{prod} depends directly of Task \texttt{post} (Dataset I/O 4) and indirectly of Task \texttt{model} (Dataset I/O 2). Once all this dependencies are represented in the workflow, then the storage for all datasets can be optimised.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\columnwidth]{cylc-io-model-3}
+  \caption{First Stage Workflow}
+  \label{fig:cylc-io-model-3}
+\end{figure}
+
+The focus of this paper is to exemplify the I/O optimisations that can be made if the datasets dependencies are established. This information in fact is presented in the workflows prior to the Cylc application, so nothing else will be required from the user. But to have the information explicitly, Cylc need some changes to be able to:
+
+\begin{enumerate}
+
+\item deliver it together with the workflow, and
+
+\item adapt the resulting workflow to consider the I/O modifications.
+
+\end{enumerate}
+
+The information about the system architecture can be provided in advance. If that is not possible, we can use monitoring to identify both the architecture and the I/O patterns for the workflow. For that, all we need is to run one cycle of the workflow and detect the patterns associated with it. For this purpose, we intend to use Machine Learning to identify the patterns and adapt the workflow in case of unexpected situations (system is down, nodes are unresponsive, etc.).
+
+With this separation of concepts, we can abstract from the worflow what is essential and has to be provided by the user and what a machine should optimise to ensure that the resources available are being used smartly. Everytime parameters are manually tuned, that has a room from improvement by using automatised decision making. And Machine Learning is proven effective in replacing human-beings in several problems.
+
+About the I/O, the optimisations we can envision are related to the life cycle of datasets and the placement of such datasets into specific memory according to their utilisation. What happens in most current workflows is that usually they use only two types of file systems: \textbf{work} and \textbf{local}. When a task is set to computing, the corresponding dataset is moved to local, processed, and the resulting datasets are moved back to \textbf{work}. If the local filesystem achieves its capacity, then the datasets move back to \textbf{work} and keep running the task until is finished. If the I/O planning is made a priori, this situation can be avoided.
+
+\begin{description}
+
+\item{NFS} Relatively slow, persistent file system - Nightly incremental backups
+
+\item{Lustre} Large, fast distributed scratch file system - No backups
+
+\url{https://info.hpc.sussex.ac.uk/hpc-guide/storage.html}
+
+\end{description}
+
+In addition to the fyle systems described, many supercomputers have also available for the user \textbf{scratch} fyle systems (sometimes local and global). So, in a real scenario, if the architecture of the machine is known, we can better use its resources.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\columnwidth]{move}
+  \caption{Some figure like this one indicating the movements among file systems. There are a lot of them in D4.2.}
+  \label{fig:move}
+\end{figure}
 
 
 \end{document}
