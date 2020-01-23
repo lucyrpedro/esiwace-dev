@@ -1,0 +1,393 @@
+\documentclass[a4paper, twocolumn]{article}
+\newcommand{\papertitle}{Whitepaper: Smarter Workflow Processing with the Next Generation Data-Centric Interfaces}
+
+\usepackage[a4paper, margin=2cm]{geometry}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage[english]{babel}
+\usepackage[colorlinks=true,urlcolor=red]{hyperref}
+\usepackage{url}
+\usepackage{cleveref}
+\usepackage{todonotes}
+
+\usepackage{multicol}
+\setlength{\columnsep}{1cm}
+
+\usepackage{fancyhdr}
+\fancyhead{}
+\fancyfoot{}
+\fancyhead[l]{\papertitle}
+\fancyhead[r]{\includegraphics[height=1em]{ngi-logo}}
+\fancyfoot[r]{\thepage}
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{1pt}
+\renewcommand{\footrulewidth}{1pt}
+
+\usepackage{titling}
+\pretitle{\begin{center}\Large\bfseries}
+\posttitle{\end{center}\vskip 0.5em}
+
+\graphicspath{{./assets/}}
+
+\title{\papertitle}
+
+\author{Julian M. Kunkel
+  \textit{University of Reading}
+    \and
+  Chris Hoffman
+  \textit{National Center for Atmospheric Research}
+  \and
+  Andy Poling
+  \textit{Kove}
+  \and
+  Jay Lofstead \textit{Sandia National Laboratories}
+}
+\date{\today}
+
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\section*{Abstract}
+The efficient, convenient, and robust execution of data-driven workflows and enhanced data management are key for productivity in scientific computing and computer-aided Research Development and Engineering (RD\&E).
+Traditionally in HPC the concerns of storage and compute are separated and optimised independently from each other, and, moreover, independently from the needs of end-to-end user workflows that ultimately lead to insight.
+While there are good reasons for this strategy, there are workflows that also run efficiently with alternative organisations.
+For example, Big data tools integrate compute and storage capabilities into a holistic solution demonstrating the benefit of tight integrating for data-driven workflows.
+As workflows become increasingly complex and blend beyond data centres while at the same time, storage hierarchies become deeper, the community investigates means to re-organise storage access to utilise such environments fully.
+
+
+Even within a single data centre, utilising homogeneous storage and compute infrastructure efficiently is complex for experts and needs manual definition.
+The efficient management of data and compute capabilities in a heterogeneous environment. However, it is an unresolved question as the execution of individual tasks from workflows may benefit from alternative hardware architectures and infrastructures.
+
+In this white paper, we describe the vision for the Next-Generation Data-Centric Interface (NGI) initiative that aims to tackle the aforementioned storage and compute challenges in a holistic approach.
+Within the NGI consortium, we fuse state-of-the-art concepts into a revolutionary interface by rethinking how data-driven I/O should be done.
+Basically, we believe workflows composed of data, compute, and communication-intensive tasks should drive the interfaces and hardware configurations to best support these programming models.
+From the user perspective, NGI aims to provide an abstraction to data-driven processing and data management.
+The NGI interface ultimately will increase the opportunity of implementations for smarter scheduling of compute and storage in heterogeneous environments considering characteristics of workflows and data.
+From the system perspective, the vision of NGI aims to derive an execution plan that utilises the available hardware and software infrastructure within and across data centres but also on small-scale systems.
+
+\section{Introduction}
+
+High-Performance Computing harnesses the fastest hardware components to enable
+the execution of tightly coupled applications from science and industry.
+Typical use-cases cover the numerical simulation of physical systems or the analysis of large-scale observational data.
+While the hardware of HPC systems is on the bleeding edge, the software landscape of the infrastructure lacks behind modern concepts found in domains like cloud computing.
+There are various reasons for the lack of innovation, e.g., the market capitalisation is limited; many HPC applications have a lifetime of sometimes several decades\footnote{For example, CTH at Sandia is more than 30 years old, but it has evolved over the years as hardware has changed.
+It is not uncommon that codes take ten years to write and receive a first optimised setup.
+Then they run for another 30 years with constant evolution based on platform changes and functionality expansions.}; the goal in HPC is to get science done and not to have modern and user-friendly systems.
+Therefore, software developed to target the HPC market is rarely used outside data centres; while there is no reason to use developed applications outside this scope, software to aid developers or for managing HPC infrastructure suffers the same cause.
+Nowadays, HPC adapts infrastructure software from the enterprise and cloud market as much as possible; at best, adapting (stretching) already existing software packages to the needs of HPC.
+
+From the perspective of big data and cloud solutions, the state-of-the-art in the HPC software ecosystem is perceived as conservative and outdated at least; for example, HPC still uses batch processing and dedicates nodes to the execution of individual applications which were the first concepts implemented at the dawn of computing.
+Similar to writing code in assembler, often it is argued that HPC treats user-friendliness and manageability to obtain the best possible performance.
+However, as the complexity of systems increases and various alternative storage and compute technologies provide unique characteristics, it is barely possible to define optimal data-driven workflows using low-level constructs for the following reasons:
+
+\begin{itemize}
+  \item Compute focus: HPC considers computing, storage, and network as separate resources and focuses on the compute aspects, e.g., I/O requires to retrieve/store data from a compute node.
+  While this provides a beautiful separation of concerns, it disregards the opportunity to process data closer to storage or between applications.
+  \item Complexity: a data-driven workflow is highly complex and may benefit from using a heterogeneous set of compute and storage technology at the same time.
+  Knowing the capabilities, interfaces, and performance characteristics of individual components are mandatory to make the best use of them.
+  \item Portability: moving from one infrastructure to another or even when modifying the infrastructure requires to rethink and manually adapt the workflow as the characteristics of the overall environment changes.
+  \item Cost-efficiency: it is time-consuming to utilise low-level constructs often only increasing performance slightly; also, the cost of labour must be taken into account.
+  From the perspective of scientists and engineers, the time-to-solution from experimental design to insight matters and not the cost-savings for the public data centre.
+  \item Conservative users: users are reluctant to change their workflows for the reasons that older workflows are proven to be correct, and it is labour intensive to adapt workflows manually.
+\end{itemize}
+
+For these reasons, workflows are typically encoded manually and run suboptimally on HPC systems.
+Additionally, users of public data centre services supply limited information about their experiments, typically the level of detail is like "I need X CPU hours and Y storage capacity" and they have not to prove their ability to use these systems efficiently.
+Still, the systems these workflows run on cost up to 100 million dollars.
+Compare this to experiments conducted in physics like the Large Hadron Collider (LHC) at CERN or the Square Kilometer Array (SKA); execution of complex experiments may need years of planning involving the scientists.
+While it is essential to keep some freedom to conduct ad-hoc experiments, we raise the question of what could be achieved by systems and operators knowing workflows in more detail.
+We argue that knowledge about workflow execution and overall experimental design helps to
+optimise execution of workflows and additionally increase the performance, throughput and cost-efficiency of the environments, in addition to that, providing an incentive to users and data-centres that cannot be neglected.
+
+\medskip
+
+With the Next Generation Interfaces initiative, we aim to define a high-level interface that, firstly, meets the needs of users and data centres, and, secondly, that allows implementations to exploit the capabilities of current and future storage and compute landscapes.
+The remainder of this article is structured as follows: \\
+\todo[inline]{TODO}
+
+In \Cref{sec:background}, we provide relevant background information for workflows.
+\Cref{sec:challenges}
+\Cref{sec:ngiVision}
+\Cref{sec:ngWorkflows}
+\Cref{sec:community}
+\Cref{sec:conclusions}
+
+
+\section{Workflows}
+\label{sec:background}
+This section provides an introduction to workflows that solve computational problems, the mandatory steps to encode and setup tasks and describe data, and the relevance of heterogeneous infrastructure to run workflows.
+We focus on high-level considerations that illustrate mandatory concepts.
+
+%Kubernetes
+
+\subsection{Workflow Description}
+
+To solve a computational problem, we can consider describing the necessary steps from the start to the insight as a workflow.
+Such a workflow description must comprise of the individual data processing steps, the expected products, together with dependencies between the steps and to input.
+The nodes can be annotated with characteristics of the individual steps;
+data can be annotated with metadata describing its content, the expected data life cycle information, e.g., the value of data and how long should it be kept; tasks can be annotated with the necessary information to start processing or with performance models that bound the expectations for resources (time, memory, storage capacity).
+
+An example execution of a workflow is illustrated in \Cref{fig:workflow} as a graph (we have not shown characteristics and annotations).
+Arrows indicate dependencies between nodes that represent tasks and data.
+In the example, Task\,1 needs two datasets to perform its work, it directly communicates with Task\,2 and produces Product\,1.
+Most of the workflow can run automatically except the manual quality control of the products and the final data usage of Product\,3 at the end.
+The last step represents the typical uncertainty of data reuse. When this workflow is created, it is unclear how Product\,3 will be used further, but apparently, it will be.
+Further workflows that use the data may be created similarly and use the product as input.
+
+Note that a realistic workflow will be much more complex and involves not a single parallel job execution but many to generate a robust answer to the research question.
+
+
+\begin{figure}[b]
+  \centering
+  \includegraphics[width=0.75\columnwidth]{workflow}
+  \caption{Example High-Level Workflow without Characteristics}
+  \label{fig:workflow}
+\end{figure}
+
+\subsection{Task Definition}
+
+The high-level interaction of a task with its dependencies is generally specified in the workflow.
+A computing task is encoded in a programming language by a developer\footnote{We often treat developer and HPC user as synonyms as a fraction of HPC users are developers for parallel applications to some extent.}.
+A team of developers encodes the algorithm that solves the problem -- e.g., in many cases,  scientists that generate a numerical simulation implement the model programmatically.
+Often they use existing libraries that provide a piece of functionality or infrastructure.
+In the design phase of the program, a parallel programming paradigm and suitable data structures that allow efficient data processing are chosen.
+In the world of parallel computing, the developer must also consider strategies to parallelise the code and data processing; this often involves to use APIs and runtime systems that allow the efficient usage of supercomputers.
+
+While most parts of the algorithm can be a tightly coupled simulation, as part of the algorithm, input data must be fetched, and data products are generated which are processes that are executed outside of the first simulation.
+Typically, before the input data can be used some kind of preprocessing must be applied, similarly, in the output, several known post-processing steps may be applied.
+Also, the programmer is responsible for making the optimal decisions on how to map data structures from memory to I/O calls and place these files onto storage systems.
+
+We consider that pre/post-processing are part of the data-driven scope of NGI.
+Indeed, we claim the programmer should be able to define the input/output on an abstract fashion and connect processing steps as part of the general workflow.
+
+\subsection{Heterogeneous Infrastructure}
+
+The variety of tasks executed by a single workflow may benefit from heterogeneous storage and compute infrastructure and potentially even span multiple locations.
+\Cref{fig:heterogeneous} shows such an environment but focuses on computation and storage.
+A variety of accelerators (GPU, TPU, FPGAs), active storage, in-memory, and in-network computing technologies provide processing capabilities across and beyond an HPC centre optimised for specific workloads.
+Data centres typically provide more than one storage and compute class with different characteristics to optimise cost and efficiency.
+Likewise, storage is deployed data centre wide, locally available to individual nodes, or subsets of nodes (e.g., racks); depending on the need, the characteristics range from predictable low-latency (in-memory storage, NVMe) to online storage (SSD, HDD), to cheap storage for long-term archival (tape).
+
+The processing across geographic locations is nowadays mandatory to tame the data volumes of observational or simulation data.
+Also, the lines between cloud computing and HPC are blurry. Attempts are made to augment processing by flexibly migrate bursts of computation to cloud environments, ingest data from cloud sources or provided to customers.
+Consider a simple scenario where sensor data captured is pre-processed (cleaned) locally, then enriched with an additional data source in a small-scale HPC facility or by using fog computing, then transferred to a data centre that performs the number crunching and generates data products.
+These data products may be made available on cloud storage to customers for individual processing.
+
+\begin{figure}[b]
+  \centering
+  \includegraphics[width=\columnwidth]{system}
+  \caption{Example Heterogeneous HPC Landscape}
+  \label{fig:heterogeneous}
+\end{figure}
+
+\section{Challenges and Limitations}
+\label{sec:challenges}
+The current HPC environment faces several challenges and limitations concerning the execution of data-driven workflows.
+
+
+
+\paragraph{Low-level interfaces:}
+In a nutshell, a stream of bytes isn't a workable data model.
+HPC data management and data-flow processing utilise low-level interfaces.
+Storage relies still on traditional file system objects of directories and files -- provided by the POSIX interface or by object storage.
+Underlying storage systems are receiving or delivering streams of bytes, and it cannot make any intelligent decisions about how to optimise data layout for performance, or resiliency.
+It deals with data blocks and files and requires instructions on how to select and control available optimisation strategies.
+
+In practice, applications build up layers so that the app itself is usually working with the data mediated by a library which provides application-specific semantics --- but at the lowest level, such a library is limited by the underlying storage APIs (POSIX).
+This has performance implications due to synchronisation in distributed environments but also severely limits the ability of the underlying storage systems to optimise I/O operations.
+
+Data-driven processing suffers similarly, from the high-level view of processes that are executed on a given compute node.
+
+
+\paragraph{Explicit workflows:}
+Typically, as part of shell scripts, users explicitly encode data processing workflows as a sequence of steps consisting of input, compute, and output.
+The compute-intense parts (jobs) and their dependencies are managed by a cluster resource manager that dispatches them.
+These loosely coupled workflows require that intermediate results are stored on persistent storage to be used by the next task.
+Data transfer, however, needs a dominant fraction of energy compared to computation favouring offloading of computation to storage.
+
+
+\paragraph{Suboptimal Storage Tiering:}
+Organising the data placement on storage tiers is typically performed manually by the developer/user or via policies, leading to suboptimal optimisations, is tedious and error-prone.
+
+Manual tiering requires the user or application to control the data placement, i.e., storing data (typically in the form of files) on a particular storage system and usually moving data between storage by using scripts.
+One limitation here is that decisions about how data structures are mapped and packaged into files are made once by the producing application, and cannot be changed without manual intervention by a downstream application.
+
+A policy system (e.g. burst buffer) aims to simplify the data movement for the user but typically migrates objects in the coarse granularity of files.
+However, the semantical information that can be used by a policy system to make decisions is limited, e.g.,  data location, file extension, age of the file.
+
+Any hard-coded decision has significant implications for the performance of both applications and systems because the optimal choices about file size and content may be very different for the data production and any subsequent data analysis phase.
+In any case, data migration needs resources on the source and the target storage system to copy data.
+Thus, it is preferable to direct data to locations where it can be stored and directly used by subsequent workflows; at best coupling the data source producing data with a data consumer to prevent storing intermediate products on persistent storage.
+
+\paragraph{Task and data equality:}
+
+All tasks and data products are handled identically by an HPC system, meaning there is no differentiation between individual jobs and data products.
+This lack of hierarchy is problematic as different use cases may not only differ in priority and deadline but as the speed, they depend on the critical path of the execution.
+
+Fair enough, batch systems understand a priority for jobs.
+However, once a set of nodes is allocated explicitly to a compute job, the job is run exclusively. It may utilise shared resources such as storage systems and network as any other job. %-- the quality of service features available in hardware is rarely used.
+
+This problem is even more severe for data products: a storage system provides a single level of performance and resilience and performance for all use cases.
+Theoretically, different fault-tolerance and performance policies can be realised with different storage systems and using management policies.
+However, these policies would be coarse-grained and would not account for the priority of the workflow and most importantly the value of data;
+the importance of data depends on aspects like costs to reproduce the data (can it be re-produced easily), the type of the experiment (test run, production run) and runtime constraints for the overall and potential crucial workflow.
+While value and priority should influence fault-tolerance strategies and imply the quality of service for performance and availability, in practice, this is not the case as the storage just sees blocks and files.
+
+\paragraph{Manual optimisation:}
+Utilising the compute and storage characteristics of a heterogeneous environment as depicted in \Cref{fig:heterogeneous} is challenging at least.
+The optimisation of a single parallel job already is quite challenging.
+To make optimal use of available features, programmers and users are forced to think about technical aspects and terms, e.g., setting low-level MPI hints for file striping, while they understand their workflow.
+Similarly, an efficient data placement is complex.
+
+\medskip
+
+A specific workflow combined with manual optimisation is the root-cause of subsequent problems.
+
+\paragraph{Access pattern in transparency:}
+As access patterns are primarily implicitly defined in application code and embedded in workflows, the understanding and debugability of behaviour are limited.
+Firstly, there are many alternatives ways of programming data-intensive computation to achieve identical data products.
+Secondly, many storages and compute interfaces are low-level.
+Thus, data centres have often limited insight into the access patterns as well.
+Moreover, some users are abusing the storage system in non-obvious ways, for example, to exchange notifications.
+Together with the possibility to observe access patterns at low-level, these issues lead to the situation that understanding and improvement of access patterns become difficult.
+Limited insight into behaviour leads to suboptimal tuning.
+
+Manual and hard-coded workflows cannot handle changes in the environment and are error-prone.
+Therefore, users must be able to express their workflows in an abstract fashion that allows the system to generate (near-)optimal execution plans and monitor their execution.
+
+
+\section{NGI Vision}
+\label{sec:ngiVision}
+
+Our vision for Next Generation Interfaces is a new approach for data management and data-driven computation.
+%\paragraph{Data Model}
+NGI tackles the challenge of storage and data-flow computation in a holistic way accepting that data storage is only aiding the goal of generating insight.
+Besides providing a typical abstract data model, NGI treats domain metadata\footnote{ in addition to that, we mean non-technical information about the data, for instance, the name of an experiment.}, workflows, and information lifecycle management (ILM) as first-class citizens allowing the storage to understand these concepts.
+This user information is exploited by smart components of NGI which aim to utilise capabilities of heterogeneous system landscapes.
+
+To describe the features and benefits of the approach further, we sketch the user and system perspective in the following, as this highlights how we believe we should work in the 21st century.
+The vision covers not only HPC but spans cloud, enterprise, and personalised IT.
+
+\subsection{User Perspective}
+
+\newcommand{\bnf}[1]{\textless #1\textgreater}
+
+From the user's perspective, the interface and system match the core requirements and expectations, including reliability, availability, and usability.
+
+\paragraph{Data model:} the data model is based on state-of-the-art solutions like HDF5+X where X indicates an extension for ILM, workflows and processing.
+However, it abstracts from data localisation and low-level concepts like files and directories and puts its focus on data organisation and data structures.
+The integration into applications is shown in \Cref{fig:ngilayers}.
+Applications may utilise the NGI API directly, or utilise existing middleware\footnote{Which won't be able to use the full set of features if not extending its interface.}.
+From the perspective of a developer of middleware or an application like web publishing, NGI provides a standard feature set that reduces the amount of code replication inside domain-specific solutions.
+
+
+\paragraph{Namespace:} data is accessed using information from the domain metadata, i.e., similar to using methods of data indexing services.
+The system won't be relying on a hierarchical namespace, but a dynamic mapping to the POSIX namespace can be provided to enable compatibility for POSIX applications.
+For example, a user may decide to see a hierarchy like an experiments \bnf{Date}/\bnf{Name}/\bnf{Timestep}/\bnf{Variable}.
+
+\paragraph{Workflow specification:} the user defines a workflow describing the intentions of data manipulation and the data lifecycle, including manual (user) involvement in the data processing.
+This also includes the definition of constraints, for instance, deadlines for the generation of the final data products (insight).
+Workflows can be defined using arbitrary tools, including Python.
+Note that a user does not provide an accurate mapping to system or infrastructure but expects that the system derives an optimised \textit{execution plan} that covers \textit{heterogeneous infrastructures}.
+It does not matter where data is processed and how and where information is stored but only that the desired result is computed with all constraints met.
+Workflows and data lineage of data products are recorded and can be inspected by the user upon demand, allowing to reproduce and validate the correct execution of experiments.
+
+
+\paragraph{Behavioral contracts:}
+Besides the core characteristics, users expect the execution of their workflows under constraints (including cost and time constraints).
+The system is always expected to show the expected characteristics and shield the user from system-specifics and undesired events (like faults or data loss).
+The characteristics may improve over time, for instance, by expanding hardware capabilities, but the user won't have to change their workflow specification.
+Still, for expert users, interfaces for introspecting system state and decision making are provided.
+
+\paragraph{Prescriptive analysis:} a toolset for users and administrators allows to explore scenarios.
+Similarly, to an SQL Explain statement, this provides an unprecedented level of introspection, for instance, to predict the runtime or execution costs of a workflow on a given system.
+Sharing the workflow description with vendors allows them to conduct predictions for runtime and costs for their solutions.
+The ecosystem may also prescribe alternative systems to use in an open environment, e.g., this part of the workflow should be run on data centre A and this part on cloud provider B.
+
+
+
+\subsection{System Perspective}
+
+An implementation of the NGI API exploits the user-supplied information and system characteristics intelligently to meet the user expectations and smartly use heterogeneous compute and storage landscapes.
+It is expected that machine learning techniques will be applied to serve the individual aspects and evolve the systems over time.
+
+\paragraph{Awareness:}
+the system knows and understands user metadata and the overarching workflows (with the user intentions).
+It is self-aware, knowing the nominal characteristics of the hardware and software components, continually comparing the system and workflow state with the expectations to perform mitigating actions to heal deviations.
+At best, each hardware component would ship with a behavioural model that can be integrated hierarchically up to a global system model.
+With behavioural models, we not only mean performance models but reliability and cost-models as well.
+
+\paragraph{Resource management:}
+the system is in charge to manage and provision the available hardware resources autonomously.
+Ultimately, it aims to utilise the individual characteristics of heterogeneous compute and storage landscapes by using intelligent scheduling.
+Data placement and localisation is beyond mere tiering strategies; parts of data may be placed on particular storage technology or replicated in different representations across storage characteristics.
+In addition to that, you are serving different access patterns and workflows at the same time.
+Naturally, the system will replicate (expand) upon the availability of storage space while reducing redundancy under the shortage of space.
+
+\paragraph{Liquid computing:}
+the system is in charge to manage and provision the available hardware resources autonomously and to assign compute and storage resources to tasks.
+In addition to that, it may use, e.g., GPU, CPU, and in-network computing capabilities to serve pieces of a single workflow.
+Moreover, as workflows stretch across data centres and over cloud and edge, an environment that schedules and dispatches work and storage efficiently is vital.
+We call this concept \textbf{liquid computing} as the compute resources are dynamically provisioned and assigned; while data flows through the system, it is processed.
+Naturally, processing closer to the data sources is likely to improve system throughput.
+The programming of the processing will be based on a high-level functional language providing primitives for data-flow computing and compiled into a virtual machine or machine code when the code is to be dispatched.
+The capabilities of different hardware components may be limited, realising only a subset of the language which must be taken into account by the scheduler.
+
+
+\paragraph{Smart scheduling:}
+supplied with user workflows and their characteristics, the system derives execution plans for the computation and make data placement decisions that aim to utilise the available hardware resources.
+As NGI is in charge for both, it may decide to trade computation vs storage capacity or other characteristics (e.g., costs, energy consumption); for example, enabling automatic recomputation of intermediate states utilising virtualisation and container technologies.
+Similarly, the scheduler may decide to couple subsequent steps of a workflow directly without storing intermediate data products on persistent storage.
+Data might be replicated but enables the system to rerun parts of the workflow in case of a data loss.
+
+The automatic scheduling is key to efficient processing and will allow constant improvement without forcing the user to adjust their workflows.
+In most cases, individual resources are not used exclusively by a single task, but QoS methods ensure that constraints of workflows are met.
+Note that this significant change for HPC environments, as compute resources are typically dedicated to specific jobs.
+
+\paragraph{Extensible ecosystem:}
+the hardware and software landscape will be open, allowing to integrate solutions from different hardware and software vendors.
+Systems connected may use different interfaces, including traditional POSIX interfaces, NoSQL, or distributed hash tables.
+Imagine that a specific class of workflows performs inefficiently on a given infrastructure indicating a crucial processing or storage capability is missing.
+Adding new capabilities or resources to the system will allow the scheduler to use them in subsequent user-workflows speeding up the processing; this should be as easy as adding an appliance to a business environment.
+
+
+
+\begin{figure}[b]
+  \centering
+  \includegraphics[width=0.75\columnwidth]{layers-ngi}
+  \caption{Layers with NGI}
+  \label{fig:ngilayers}
+\end{figure}
+
+
+
+\section{Conclusions}
+\label{sec:conclusions}
+
+
+Cloud definition of desired state and contracts.
+
+Indeed many research prototypes address subproblems
+* But not all aspects together
+* Competing approaches; the standardisation we describe here does not compete!
+
+In this paper, we purposely do not mention too many of the ongoing RD\&E in storage and compute.
+
+
+
+
+To wrap up, NGI provides a high-level view on data and processing on heterogeneous platforms while shielding the user from execution details.
+
+Open ...
+
+\includegraphics[width=2cm]{ngi-logo}
+
+\noindent\url{https://ngi.vi4io.org}
+
+
+\end{document}

@@ -1,6 +1,6 @@
 %\documentclass[a4paper, twocolumn]{article}
 \documentclass[a4paper]{article}
-\newcommand{\papertitle}{Whitepaper}
+\newcommand{\papertitle}{Whitepaper -- Optimising Storage Inside Workflows}
 
 \usepackage[a4paper, margin=2cm]{geometry}
 
@@ -13,6 +13,7 @@
 \usepackage{float}
 \usepackage{cleveref}
 \usepackage{todonotes}
+\usepackage{comment}
 
 \usepackage{multicol}
 \setlength{\columnsep}{1cm}
@@ -37,7 +38,7 @@
 
 \author{Julian M. Kunkel
   \textit{University of Reading}
-	\and
+    \and
   Luciana R. Pedro
   \textit{University of Reading}
 }
@@ -48,36 +49,163 @@
 \maketitle
 \thispagestyle{fancy}
 
+{ \color{cyan}{
+
 \section*{Abstract}
+The efficient, convenient, and robust execution of data-driven workflows and enhanced data management are key for productivity in scientific computing.
+Traditionally, in HPC, the concerns of storage and computing are separated and optimised independently from each other, and, moreover, independently from the needs of end-to-end user workflows that ultimately lead to insight.
+As workflows become increasingly complex and blend beyond data centres while at the same time, storage hierarchies become deeper, the community investigates means to re-organise storage access to utilise such environments fully.
+
+In this white paper, we describe an initiative that aims to tackle storage and computing challenges mentioned above in a holistic approach by fusing state-of-the-art concepts into a revolutionary interface by rethinking how data-driven I/O should be done.
+The tools employed here to achieve this extended workflow are Cylc, DDN IME, and ESDM Scheduler.
+Basically, we believe workflows composed of data, computing, and communication-intensive tasks should drive the interfaces and hardware configurations to best support these programming models.
+From the user perspective, we aim to provide an abstraction to data-driven processing and data management.
+The proposed interface ultimately will increase the opportunity of implementations for smarter scheduling of computing and storage in heterogeneous environments considering characteristics of workflows and data.
+From the system perspective, the vision aims to derive an execution plan that utilises the available hardware and software infrastructure within and across data centres.
+
 
 \section{Introduction}
 
-\section{Workflows}
-\label{sec:background}
+High-Performance Computing harnesses the fastest hardware components to enable
+the execution of tightly coupled applications from science and industry.
+Typical use-cases cover the numerical simulation of physical systems or the analysis of large-scale observational data.
+While the hardware of HPC systems is on the bleeding edge, the software landscape of the infrastructure lacks behind modern concepts found in domains like cloud computing.
+There are various reasons for the lack of innovation, e.g., the market capitalisation is limited; many HPC applications have a lifetime of sometimes several decades\footnote{For example, CTH at Sandia is more than 30 years old, but it has evolved over the years as hardware has changed.
+It is not uncommon that codes take ten years to write and receive a first optimised setup.
+After that, they run for another 30 years with constant evolution based on platform changes and functionality expansions.}; the goal in HPC is to get science done and not to have modern and user-friendly systems.
+Therefore, software developed to target the HPC market is rarely used outside data centres; while there is no reason to use developed applications outside this scope, software to aid developers or for managing HPC infrastructure suffers the same cause.
+Nowadays, HPC adapts infrastructure software from the enterprise and cloud market as much as possible; at best, adapting (stretching) already existing software packages to the needs of HPC.
 
-An example of a simple workflow can be seen in \Cref{fig:workflow}. In this workflow, there are the following components:
+From the perspective of big data and cloud solutions, the state-of-the-art in the HPC software ecosystem is perceived as conservative and outdated at least. For example, HPC still uses batch processing and dedicates nodes to the execution of individual applications which were the first concepts implemented at the dawn of computing.
+Similar to writing code in assembler, often it is argued that HPC trades user-friendliness and manageability to obtain the best possible performance.
+However, as the complexity of systems increases and various alternative storage and computing technologies provide unique characteristics, it is barely possible to define optimal data-driven workflows using low-level constructs for the following reasons:
 
 \begin{description}
 
-\item[Input] The data inserted in the workflow. It is composed of files describing, for instance:
+  \item[Computing Focus] HPC considers computing, storage, and network as separate resources and focuses on the computing aspects, e.g., I/O requires to retrieve/store data from a computing node.
+  While there are good reasons for this strategy as they provide a beautiful separation of concerns,  there are workflows that run efficiently with alternative organisations because they take into consideration the opportunity to process data closer to storage or between applications.
+
+  \item[Complexity] A data-driven workflow is highly complex and may benefit from using a heterogeneous set of computing and storage technology at the same time.
+  While there are good reasons for this strategy, there are workflows that also run efficiently with alternative organisations.
+
+  Knowing the capabilities, interfaces, and performance characteristics of individual components are mandatory to make the best use of them.
+
+  \item[Portability] Moving from one infrastructure to another or even when modifying the infrastructure requires to rethink and manually adapt the workflow as the characteristics of the overall environment changes.
+
+  \item[Cost-efficiency] It is time-consuming to utilise low-level constructs and they often only increase the performance slightly. Also, the cost of labour must be taken into account.
+  From the perspective of scientists and engineers, the time-to-solution from experimental design to insight matters and the cost-savings for the public data centre can be disregarded.
+
+  \item[Conservative Users] Users are reluctant to change their workflows because they already know that older workflows are proven to be correct and, therefore, they want to avoid the intensive labour to adapt workflows manually.
+
+\end{description}
+
+For these reasons, workflows are typically encoded manually and run suboptimally on HPC systems.
+Additionally, users of public data centre services supply limited information about their experiments, typically the level of detail is like "I need X CPU hours and Y storage capacity" and they have not to prove their ability to use these systems efficiently.
+Still, the systems these workflows run on cost up to 100 million dollars.
+Comparing this amount to experiments conducted in physics like the Large Hadron Collider (LHC) at CERN or the Square Kilometer Array (SKA), it becomes clear that the execution of complex experiments may need years of planning involving the scientists.
+While it is essential to keep some freedom to conduct ad-hoc experiments, we raise the question of what could be achieved by systems and operators knowing workflows in more detail.
+We argue that knowledge about workflow execution and overall experimental design helps to
+optimise execution of workflows and additionally increase the performance, throughput and cost-efficiency of the environments, providing an incentive to users and data-centres that cannot be neglected.
+
+With the Next Generation Interfaces initiative, we aim to define a high-level interface that, firstly, meets the needs of users and data centres, and, secondly, that allows implementations to exploit the capabilities of current and future storage and computing landscapes.
+
+\section{Workflows}
+
+This section provides an introduction to workflows that solve computational problems, the mandatory steps to encode and setup tasks and describe data, and the relevance of heterogeneous infrastructure to run workflows.
+We focus on high-level considerations to illustrate mandatory concepts.
+
+\subsection{Workflow Description}
+
+To solve a computational problem, we can consider describing the necessary steps from the start to the insight as a workflow.
+Such a workflow description must comprise of the individual data processing steps, the dependencies among them, the input, and the expected products. An example execution of a workflow is illustrated in \Cref{fig:workflow} as a graph.
+Arrows indicate dependencies between nodes that represent tasks and data.
+In the example, Task\,1 needs two datasets to perform its work, it directly communicates with Task\,2 and produces Product\,1.
+Most of the workflow can run automatically except the manual quality control of the products and the final data usage of Product\,3 in the end.
+The last step represents the typical uncertainty of data reuse. When this workflow is analysed, it is unclear how Product\,3 will be used further, but, apparently, it will be.
+Further workflows that use the data may be created similarly and use products as input.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.4\columnwidth]{workflow}
+  \caption{Example of a high-level workflow}
+  \label{fig:workflow}
+\end{figure}
+
+Note that a realistic workflow will be much more complex and involves not a single parallel job execution, but many to generate a robust answer to the problem in question. Extra information can be, for instance:
 
 \begin{itemize}
 
-\item The actual input data, for instance, the dates for the experiments, how many times the workflow has to run,
+\item The nodes can be annotated with characteristics of the individual steps;
 
-\item The dependencies among the tasks. In this case, Task 1 and Task 3 have no dependencies and Task 2 depends on the results of Task 1.
+\item Data can be annotated with metadata describing its content, the expected data life cycle information, e.g., the value of data and how long should it be kept;
 
-\item The I/O information, i.e., where the data will be storage in each step of the workflow.
+\item tasks can be annotated with the necessary information to start processing or with performance models that bound the expectations for resources (time, memory, storage capacity).
 
-\item The information about how long the final result has to be stored.
+\end{itemize}
+
+\subsection{Task Definition}
+
+The high-level interaction of a task with its dependencies is generally specified in the workflow.
+A computing task is encoded in a programming language by a developer\footnote{We often treat developer and HPC user as synonyms as a fraction of HPC users are developers for parallel applications to some extent.}.
+A team of developers encodes the algorithm that solves the problem. In many cases, scientists that generate a numerical simulation implement the model programmatically.
+Often, they use existing libraries that provide a piece of functionality or infrastructure.
+In the design phase of the program, a parallel programming paradigm and suitable data structures that allow efficient data processing are chosen.
+In the world of parallel computing, the developer must also consider strategies to parallelise the code and data processing, which often involve the use of APIs and runtime systems that allow the efficient usage of supercomputers.
+
+While most parts of the algorithm can be a tightly coupled simulation, as part of the algorithm, the input data must be fetched.
+
+Typically, before the input data can be used, some kind of pre-processing must be applied. Similarly, in the output, several known post-processing steps may be applied.
+Also, the programmer is responsible for making the optimal decisions on how to map data structures from memory to I/O calls and place these datasets onto storage systems.
+We consider that pre/post-processing are part of the data-driven scope of workflows.
+Indeed, we claim that the programmer should be able to define the input/output on an abstract fashion and connect processing steps as part of the general workflow.
+
+\subsection{Heterogeneous Infrastructure}
+
+The variety of tasks executed by a single workflow may benefit from heterogeneous storage and computing infrastructure and potentially even span multiple locations.
+\Cref{fig:heterogeneous} shows such an environment with a focus on computation and storage.
+A variety of accelerators (GPU, TPU, FPGAs), active storage, in-memory, and in-network computing technologies provide processing capabilities across and beyond a HPC centre optimised for specific workloads.
+Data centres typically provide more than one storage and computing class with different characteristics to optimise cost and efficiency.
+Likewise, storage is deployed data centre wide, locally available to individual nodes, or subsets of nodes (e.g., racks). Depending on the need, the characteristics range from predictable low-latency (in-memory storage, NVMe) to online storage (SSD, HDD), and cheap storage for long-term archival (tape).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\columnwidth]{system}
+  \caption{Example of an heterogeneous HPC landscape}
+  \label{fig:heterogeneous}
+\end{figure}
+
+The processing across geographic locations is nowadays mandatory to tame the data volumes of observational or simulation data.
+Also, the lines between cloud computing and HPC are blurry. Attempts are made to augment processing by flexibly migrate bursts of computation to cloud environments, ingest data from cloud sources or provided to customers.
+Consider a simple scenario where sensor data captured is pre-processed (cleaned) locally, then enriched with an additional data source in a small-scale HPC facility or by using fog computing, and then finally transferred to a data centre that performs the number crunching and generates data products.
+These data products can also be made available on cloud storage to customers for individual processing.
+
+{ \color{blue}{
+
+\subsection{User Perspective Workflow}
+
+From the user perspective, the workflow can be described by the following categories:
+
+\begin{description}
+
+\item[Input] The information inserted in the workflow. It is composed of datasets describing, for instance:
+
+\begin{itemize}
+
+\item The actual input data, for instance, the dates for the experiments, how many times the workflow has to run, etc.
+
+\item The dependencies among the tasks.
+
+\item The I/O information, i.e., where the datasets will be stored in each step of the workflow.
+
+\item The information about the lifetime of the final outcome.
 
 \item The steps in which manual decisions have to be made.
 
 \end{itemize}
 
-For simplicity, we will call these files as \texttt{input-workflow.conf}.
+For simplicity, we will call these datasets as \texttt{input-workflow.conf}.
 
-\item[Task 1] The task is specified by the user and the information we have about it are:
+\item[Task 1] The task is specified by the user and the information we have about it is:
 
 \begin{itemize}
 
@@ -91,15 +219,15 @@ For simplicity, we will call these files as \texttt{input-workflow.conf}.
 
 \end{itemize}
 
-In case of Task 1, we have:
+In the case of Task 1, we have:
 
 \begin{itemize}
 
-\item Task 1 has no prior dependencies other than the general input.
+\item Task\,1 has no prior dependencies other than the general input.
 
-\item Task 1 is a dependency for running Task 2.
+\item Task\,1 is a dependency for running Task\,2 and Task\,3.
 
-\item For simplification purposes, we will assume that Task 1 has the files \texttt{input1.conf}, \texttt{output1.conf}, and \texttt{storage1.conf} as descriptors.
+\item For simplification purposes, we will assume that Task\,1 has the datasets \texttt{input1.conf}, \texttt{output1.conf}, and \texttt{storage1.conf} as descriptors.
 
 \end{itemize}
 
@@ -107,9 +235,9 @@ In case of Task 1, we have:
 
 \begin{itemize}
 
-\item Task 2 is a dependent of Task 1.
+\item Task\,2 is dependent on the outcomes of Task\,1.
 
-\item Task 2 has the files \texttt{input2.conf}, \texttt{output2.conf}, and \texttt{storage2.conf} as descriptors.
+\item Task\,2 has the datasets \texttt{input2.conf}, \texttt{output2.conf}, and \texttt{storage2.conf} as descriptors.
 
 \end{itemize}
 
@@ -117,30 +245,27 @@ In case of Task 1, we have:
 
 \begin{itemize}
 
-\item Task 3 is independent. It does not require any other task to be started and, after finished, no other task will use its results other than the general output.
+\item Task 3 dependent on the outcomes of Task\,1 and Task\,2. It does not require any other task to be started and, after finished, no other task will use its results other than the overall output.
 
-\item Task 3 has the files \texttt{input3.conf}, \texttt{output3.conf}, and \texttt{storage3.conf} as descriptors.
+\item Task 3 has the datasets \texttt{input3.conf}, \texttt{output3.conf}, and \texttt{storage3.conf} as descriptors.
 
 \end{itemize}
 
-\item[Output]
+\item[Product]
 
-The output consists of all files generated by the workflow. Those files have to be stored for a specific amount of time previously described in one of the input files.
+A product is any of the possible outcomes of a task. Usually is composed of datasets that will be used by other tasks or generate the final output.
 
-For simplicity, we will call these files as \texttt{output-workflow.conf}. In this specific example, it is composed by the files \texttt{output1.conf}, \texttt{output2.conf}, and \texttt{output3.conf}.
+\item[Final Output]
+
+The final output consists of all datasets generated by the workflow. Those datasets have to be stored for a specific amount of time previously described in one of the input datasets.
+
+For simplicity, we will call these datasets as \texttt{output-workflow.conf}. In this specific example, it is composed by the datasets \texttt{output1.conf}, \texttt{output2.conf}, and \texttt{output3.conf}.
 
 \end{description}
 
-\begin{figure}[b]
-  \centering
-%  \includegraphics[width=0.75\columnwidth]{workflow}
-  \caption{Example High-Level Workflow}
-  \label{fig:workflow}
-\end{figure}
+For this work, the datasets belonging to \texttt{input-workflow.conf} are the datasets inserted as input for the running Cylc. The Cylc tool receives, as predefined, information about the storage and dependencies of the datasets. This information is used to construct and run the complete workflow, but it is not used to optimise intermediate steps. The configuration is already predefined, and it cannot change. For instance, if it is established that Task\,2 depends on Task\,1, then we have to wait for Task\,1 to be completed to start running Task\,2. But several options can be optimised if we know the whole workflow in advance. Thinking what about I/O, for instance, no decision is being made about an optimal way to store the data. Consider, as an example, that the datasets from \texttt{output1.conf} are divided into \texttt{output1-final.conf} and \texttt{output1-task2.conf}. Then, it is clear that \texttt{output1-task2.conf} will be required to run Task\,2, and, because of that, should be put in fast storage to quickly being retrieved, or even kept in local storage. The \texttt{output1-final.conf} dataset, however, can go directly to tape, if the lifetime of the final output has to be stored for a long time, but no access is required from the current workflow.
 
-For the purposes of this work, the files belonging to \texttt{input-workflow.conf} are the files inserted as input for the running Cylc. The Cylc tool receives, as predefined, information about the storage and dependencies of the files. These information are used to contructed and run the complete workflow, but it is not used to optimise intermediate steps. Some things are already predefined and they cannot change. For instante, if it is estabilished that Task 2 depends on Task 1, then we have to wait for Task 1 to be completed to start running Task 3. But several things can be optimised if we know the whole workflow in advance. For instance: Task 1 and Task 3 have no previous dependencies. How do we decide about when we should run those tasks? Task 1 first, because it is a dependency for Task 2? Task 3 first, because then we have a previous of a complete result, considering Task 3 has no dependencies at all? Can Task 1 and Task 3 run in parallel at the same time, and then the workflow only has to complete Task 2 to finish? On the contrary, Task 1 is really processing demanding, so it should run alone and then Task 2 and Task 3 can run concurrently without extra burden to the computing time? These are all concerns about processing time and the dependencies. But what about I/O? No decision is being made about an optimal way to store the data. Consider, for instance, that the files from \texttt{output1.conf} are divided into \texttt{output1-final.conf} and \texttt{output1-task2.conf}. Then, it is clear that \texttt{output1-task2.conf} will be required to run Task 2, and because of that, should be put in a fast storage to quickly being retrieved, of even kept in local storage. The \texttt{output1-final.conf} files, however, can go directly to tape, if the lifetime of the final output has to be stored for five years.
-
-Those simple examples are here to demonstrate that, once we have the complete knowledge about how the workflow is expect to run, we can optimise steps that were before predefined by the user considering only the options for feasibility. The user input is one of the viable options to run the workflow, but probably it is not the best, assuming other options are available. The user might even have analysed other options, but s/he has done that in a naive way (usually trial and error). By automatising these tasks, specifically a smarter route for the tasks taking into consideration the architecture available and the way the files are stored during the intermediate steps of the workflow, we have a twofold gain:
+Those simple examples are here to demonstrate that, once we have the complete knowledge about how the workflow is expected to run, we can optimise steps that were before predefined by the user usually considering only options for feasibility. The user input is one of the viable options to run the workflow, but probably it is not the best, assuming other options are available. The user might even have analysed other options, but s/he has naively done that (usually by trial and error). By automating these tasks, specifically a smarter route for the tasks taking into consideration the architecture available and the way the datasets are stored during the intermediate steps of the workflow, we have a twofold gain:
 
 \begin{itemize}
 
@@ -150,17 +275,11 @@ Those simple examples are here to demonstrate that, once we have the complete kn
 
 \end{itemize}
 
-In this paper, we approach two ways to have the extra information from the user to be able to make decisions about storage and the processing of the files/tasks.
+In this paper, we approach two ways to have the extra information from the user to be able to make decisions about storage and the processing of the datasets/tasks.
 
 \begin{itemize}
 
-\item The user will insert this information as an extra file to the Cylc workflow management. In fact, the user is already doing that, but he is doing that in just one specific way, to make the workflow possible. Here, we are thinking about simplifying the information the user is already providing. So, instead of giving the complete workflow to Cylc, Here, we are expeting the user to provide really simple information, like:
-
-\begin{description}
-
-\item[Dependencies] Run Task 1 and Task 3 in any specific order and then run Task 2 after Task 1 is finished.
-
-\item[Time/Processing]
+\item The user will insert this information as an additional file to the Cylc workflow management. In fact, the user is already doing that, but he is doing that in just one specific way, to make the workflow possible. Here, we are thinking about simplifying the information the user is already providing. So, instead of giving the complete workflow to Cylc, we are expecting the user to provide straightforward information, like:
 
 \begin{itemize}
 
@@ -168,99 +287,329 @@ In this paper, we approach two ways to have the extra information from the user 
 
 \item Task 2 usually requires two hours running in a pc with standard configuration, requires 150 GB of storage that has to be persistent for no more than two weeks week.
 
-\item Task 3 usually requires five hours running in a pc with standard configuration and it does not require extra storage other than the storage for the final results.
+\item Task 3 usually requires five hours running in a pc with standard configuration, and it does not require extra storage other than the storage for the final results.
 
 \end{itemize}
+
+\item The second option to access this type of information from the user does not require any direct information at all. The idea here is to use the DDN IME Monitoring system and have an estimate for the parameters after one run of the complete workflow. This approach is beneficial to the user because s/he does not have to take any extra step that s/he is currently doing to run the workflow through Cylc. However, the price here is being paid with an additional run of the complete workflow, which can be demanding at both time and expenses (we are considering here the paid access to a supercomputer, for example). In the end, it is up to the user and the previous knowledge s/he has about the intermediate stages of the workflow.
+
+\end{itemize}
+
+Now, comes the question. Assuming the information is available, who will be responsible for making the decisions for optimising the storage and the processing tasks? The answer here is simple: the ESDM Scheduler will do it. The ESDM Scheduler can be used in different steps of the process. ESDM has already an interface with NetCDF. Assuming the user can provide extra information in advance, ESDM can interact in the process before the user give the data to the Cylc tool, using the information to construct an optimised workflow and, once Cylc builds the workflow, ESDM can interact again after the configuration of the scripts for both effective and efficient run of the parallel applications regarding the available storage and architecture.
+
+}}
+
+\section{Challenges and Limitations}
+\label{sec:challenges}
+The current HPC environment faces several challenges and limitations concerning the execution of data-driven workflows.
+
+\begin{description}
+
+\item[Low-level Interfaces]
+
+In a nutshell, a stream of bytes is not a workable data model.
+HPC data management and data-flow processing utilise low-level interfaces.
+Storage relies still on traditional file system objects of directories and files -- provided by the POSIX interface or by object storage.
+Underlying storage systems are receiving or delivering streams of bytes, and it cannot make any intelligent decisions about how to optimise data layout for performance, or resiliency.
+It deals with data blocks and files and requires instructions on how to select and control available optimisation strategies.
+
+In practice, applications build up layers so that the application itself is usually working with data mediated by a library which provides application-specific semantics. However, at the lowest level, such a library is limited by the underlying storage APIs (POSIX),
+which has performance implications due to the synchronisation in distributed environments by severely restricting the ability of the underlying storage systems to optimise I/O operations.
+Data-driven processing suffers similarly, from the high-level view of processes that are executed on a given computing node.
+
+\item[Explicit Workflows]
+
+Typically, as part of shell scripts, users explicitly encode data processing workflows as a sequence of steps consisting of input, computing, and output.
+The computing-intense parts (jobs) and their dependencies are managed by a cluster resource manager that dispatches them.
+These loosely coupled workflows require that intermediate results are stored on persistent storage to be used by the next task.
+Data transfer, however, needs a dominant fraction of energy compared to computation favouring offloading of computation to storage.
+
+\item[Suboptimal Storage Tiering]
+
+Organising the data placement on storage tiers is typically performed manually by the developer/user or via policies, leading to suboptimal optimisations. On top of that, it is a tedious and error-prone task.
+
+Manual tiering requires the user or application to control the data placement, i.e., storing data (typically in the form of files) on a particular storage system and, usually, moving data between storage by using scripts.
+One limitation here is that decisions about how data structures are mapped and packaged into files are made once by the producing application, and cannot be changed without manual intervention by a downstream application.
+
+A policy system (e.g. burst buffer) aims to simplify the data movement for the user, but typically migrates objects in the coarse granularity of files.
+However, the semantical information that can be used by a policy system to make decisions is limited, e.g., data location, file extension, age of the file, etc.
+
+Any hard-coded decision has significant implications for the performance of both applications and systems because the optimal choices about file size and content may be very different for the data production and any subsequent data analysis phase.
+In any case, data migration needs resources from the source and the target storage system to copy data.
+Thus, to avoid extra manual work and decisions, it is preferable to direct data to locations where it can be stored and directly used by subsequent workflows -- at best, coupling the data source producing data with a data consumer to prevent storing intermediate products on persistent storage.
+
+\item[Task and Data Equality]
+
+All tasks and data products are handled identically by a HPC system, meaning there is no differentiation between individual jobs and data products.
+This lack of hierarchy is problematic, as different use cases may not only differ in priority and deadline, but the computing speed usually depends on the critical path of the execution.
+
+Fair enough, batch systems understand the priority for jobs.
+However, once a set of nodes is allocated explicitly to a computing job, the job runs exclusively, and it may utilise shared resources such as storage systems and network as any other job.
+
+This problem is even more severe for data products: a storage system provides a single level of performance and resilience and performance for all use cases.
+Theoretically, different fault-tolerance and performance policies can be realised with different storage systems and using management policies.
+However, these policies would be coarse-grained and would not account for the priority of the workflow and, most importantly, the value of data.
+The importance of data depends on aspects like costs to reproduce the data (can it be reproduced easily), the type of the experiment (test run, production run) and runtime constraints for the overall and potential crucial workflow.
+While value and priority should influence fault-tolerance strategies and imply the quality of service for performance and availability, in practice, this is not the case as the storage just sees blocks and files.
+
+\item[Manual Optimisation]
+
+Utilising the computing and storage characteristics of a heterogeneous environment as depicted in \Cref{fig:heterogeneous} is challenging.
+Even within a single data centre, utilising homogeneous storage and computing infrastructure efficiently is complex for experts and needs manual definition.
+The efficient management of data and computing capabilities in a heterogeneous environment and
+how the execution of individual tasks from workflows may benefit from alternative hardware architectures and infrastructures
+are still unresolved questions.
+
+The optimisation of a single parallel job already is quite challenging.
+To make optimal use of available features, programmers and users are forced to think about technical aspects and terms, e.g., setting low-level MPI hints for file striping, while they understand their workflow.
+Similarly, efficient data placement is complex. But a specific workflow combined with manual optimisation is the root-cause of subsequent problems, and it must be avoided and replaced with automated and optimised decisions.
+
+\item[Access Pattern in Transparency]
+
+As access patterns are primarily implicitly defined in application code and embedded in workflows, the understanding and debugability of behaviour are limited.
+Firstly, there are many alternative ways of programming data-intensive computation to achieve identical data products.
+Secondly, many storages and computing interfaces are low-level.
+Thus, data centres have often limited insight into the access patterns as well.
+Moreover, some users are abusing the storage system in non-obvious ways, for example, to exchange notifications.
+The understanding and improvement of access patterns are a limited and challenging insight into behaviour leads to suboptimal tuning.
+
+Manual and hard-coded workflows cannot handle changes in the environment and are error-prone.
+Therefore, users must be able to express their workflows in an abstract fashion that allows the system to generate (near-)optimal execution plans and monitor their execution.
 
 \end{description}
 
-\item The second option to acess this type of information from the user does not require any direct information at all. The idea here is to use the DDN IME Monitoring system and have an estimate for the parameters after one run of the complete workflow. This approach is benefical to the user, because s/he does not have to take any extra step that s/he is currently doing to run the workflow through Cylc, but it the price here is being paid with an extra run of the complete workflow, which can be demanding in both time and price (we are considering here the paid acess to a supercomputer, for example). In the end, it is up to the user and the previous knowledge s/he has about the intermediate stages of the workflow.
+\section{Vision}
 
-\end{itemize}
+Our vision for the problems described in the first sections is a new approach for data management and data-driven computation.
+Our proposed model tackles the challenge of storage and data-flow computation in a holistic way accepting that data storage is only aiding the goal of generating insight.
+Besides providing a typical abstract data model, our insight treats domain metadata\footnote{ in addition to that, we mean non-technical information about the data, for instance, the name of an experiment.}, workflows, and information lifecycle management (ILM) as first-class citizens allowing the storage to understand these concepts.
+The user information will be exploited by smart components which aim to utilise capabilities of heterogeneous system landscapes.
 
-Now, comes the question. Assuming the information is available, who will be responsible to take the decisions for optimising the storage and the processing tasks? The answer here is simple: the ESDM Scheduler will do it. ESDM Scheduler can be used in different steps of the process. ESDM has already an interface with NetCDF. Assuming the user is able to provide extra information in advance, ESDM can interact in the process before the user provide the data to the Cylc tool, using the information to already contruct an optimised workflow with Cylc) and, once the workflow is constructed by Cylc, ESDM can interact again after the configuration of the scripts for both effective and efficient run of the parallel applications.
+To describe the features and benefits of the approach further, we sketch the user and system perspective in the following, as this highlights how we believe we should work in the 21st century.
+The vision covers not only HPC but spans cloud, enterprise, and personalised IT.
 
-This paper intends to describe the information required for the user to run the tools employed in this extended workflow: Cylc (Section ), DDN IME (Section ), and ESDM Scheduler (Section ).
+\subsection{User Perspective}
 
-\section{Nice Pictures (or not!)}
+\newcommand{\bnf}[1]{\textless #1\textgreater}
 
-Consider the Cylc suite configuration for a toy monthly cycling workflow: a warm-cycled atmospheric model (model) is followed by postprocessing (post), forecast verification (ver), and product generation (prod) tasks \ref{Cylc}. This suite presents the dependencies among the tasks, but it is missing the information about I/O and storage. The decision about where the data with be stored is usually made by the developers in stages prior to Cylc and then it is incorporated into the Cylc process. The decisions about storage have to be made taking into consideration the architecture in which the workflow will run. Applied scientists should not spent time understanding hardware characteristics, but using their time to develop their work, let the computer do the job the simplest way possible, and just collect and analyse the results. However, nowadays, to be able to run a job in a HPC environment, researchers have to have a profound knowledge about their workflow, which is expected, but also about decisions regarding storage, communication, and computing.
+From the user's perspective, the interface and system match the core requirements and expectations, including reliability, availability, and usability.
 
-We propose an approach to reduce the burden on researchers and, at the same time, optimise the decisions about jobs running in HPC systems. Once we have an automated decision about where the job will run and how the storage will be managed, the scientists can the run their workflows in any machine without further interactions and even without previous knowledge about the machine architecture.
+\begin{description}
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.9\columnwidth]{cylc}
-  \caption{Toy Example Workflow}
-  \label{fig:cylc}
-\end{figure}
+\item[Data Model]
 
-Consider one cycle of the workflow, as shown in Figure \ref{fig:cylc-1}. The tasks dependencies are represented by the arrows, but there is no information about the data that are generated. Tasks \texttt{ver} and \texttt{post} depend on Task \texttt{model}, but does Task \texttt{model} needs to be fully completed to satisfy the dependency? Of course once Task \texttt{model} is completed, then Tasks \texttt{ver} and \texttt{post} can proceed, and that is the information Cylc has to create and reproduce the workflow.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.4\columnwidth]{cylc-1}
-  \caption{First Stage Workflow}
-  \label{fig:cylc-1}
-\end{figure}
-
-Assume, now, we have the scenario introduced in Figure \ref{fig:cylc-io-model-2}. In this case, we have extra information indicating why Tasks \texttt{ver} and \texttt{post} depend on Task \texttt{model}. In fact, the dependency is not to the complete task, but of some datasets produced by Task \texttt{model}. If this information is available a priori, then we can use it to start Task \texttt{ver} once we have the dataset \texttt{I/O 1} and start Task \texttt{post} once we have the dataset \texttt{I/O 3}, making the general process faster. Still considering this small example, we can assume that dataset \texttt{I/O 2} will not be used for other tasks. So this data can be stored in a "slow" storage or iot can even be deleted.
+The data model is based on state-of-the-art solutions like HDF5+X, where X indicates an extension for ILM, workflows and processing.
+However, it abstracts from data localisation and low-level concepts like files and directories and puts its focus on data organisation and data structures.
+The integration into applications is shown in \Cref{fig:apilayers}.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.6\columnwidth]{cylc-io-model-2}
-  \caption{First Stage Workflow}
-  \label{fig:cylc-io-model-2}
+  \includegraphics[width=0.5\columnwidth]{layers-api}
+  \caption{Layers with the proposed API}
+  \label{fig:apilayers}
 \end{figure}
 
-Aggregating the information about the datasets produced by every task, we can think about Tasks \texttt{ver}, \texttt{post}, and \texttt{model} as something as depicted in Table \ref{tab:cylc}.
+Applications may utilise the proposed API directly, or utilise existing middleware\footnote{Which will not be able to use the full set of features if not extending its interface.}.
+From the perspective of a developer of middleware or an application like web publishing, the tool provides a standard feature set that reduces the amount of code replication inside domain-specific solutions.
 
-\begin{table}[H]
-\centering
-\begin{tabular}{|c|c|c|}
-\hline
-  \includegraphics[width=0.3\columnwidth]{cylc-io-model} &
-  \includegraphics[width=0.3\columnwidth]{cylc-io-post} &
-  \includegraphics[width=0.3\columnwidth]{cylc-io-prod} \\
-  \hline
-\end{tabular}
-\caption{I/O Information}
-\label{tab:cylc}
-\end{table}
+\item[Namespace]
 
-Therefore, the cycle presented in Figure \ref{fig:cylc-1} becomes the extended cycle now introduced in Figure \ref{fig:cylc-io}. In this picture now we keep the tasks dependencies, we explicit the datasets dependencies regarding the tasks that generated them, but not the dependencies among the datasets and the next texts. The idea here is to embrance the concept that tasks dependencies are really datasets dependencies, and once we can insert the datasets explicitly in the workflow, it is easier to see that there are many optimisations that can be made.
+Data is accessed using information from the domain metadata, i.e., similar to using methods of data indexing services.
+The system will not be relying on a hierarchical namespace, but a dynamic mapping to the POSIX namespace can be provided to enable compatibility for POSIX applications.
+For example, a user may decide to see a hierarchy like an experiment \bnf{Date}/\bnf{Name}/\bnf{Timestep}/\bnf{Task}/\bnf{Dataset}.
+A core observation here is that, although the user may provide suggested namespaces, it is up to the system to place the data into the storage in an optimised way and return the information to the user transparently.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.4\columnwidth]{cylc-io}
-  \caption{Example High-Level Workflow}
-  \label{fig:cylc-io}
-\end{figure}
+\item[Workflow Specification]
 
-The trick part when we consider only the Tasks and not the datasets in the workflow is that it may lead to the false impression that the Tasks only depend on the immediate previous one. For that, we have an example in Figure \ref{fig:cylc-io-model-3} showing that Task \texttt{prod} depends directly of Task \texttt{post} (Dataset I/O 4) and indirectly of Task \texttt{model} (Dataset I/O 2). Once all this dependencies are represented in the workflow, then the storage for all datasets can be optimised.
+The user defines a workflow describing the intentions of data manipulation and the data lifecycle, including manual (user) involvement in the data processing.
+The definition of constraints, for instance, deadlines for the generation of the final data products (insight), can also be included.
+Workflows can be defined using arbitrary tools, including Python.
+Note that a user will not provide an accurate mapping to system or infrastructure, but expects that the system derives an optimised execution plan that covers heterogeneous infrastructures.
+It does not matter where data is processed and how and where information is stored, but only that the desired result is computed with all constraints met.
+Workflows and data lineage of data products are recorded and can be inspected by the user upon demand, allowing reproduction and validation of the correct execution of experiments.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.6\columnwidth]{cylc-io-model-3}
-  \caption{First Stage Workflow}
-  \label{fig:cylc-io-model-3}
-\end{figure}
+\item[Behavioral Contracts]
 
-The focus of this paper is to exemplify the I/O optimisations that can be made if the datasets dependencies are established. This information in fact is presented in the workflows prior to the Cylc application, so nothing else will be required from the user. But to have the information explicitly, Cylc need some changes to be able to:
+Besides the core characteristics, users expect the execution of their workflows under constraints (including cost and time constraints).
+The system is always expected to show the expected characteristics and shield the user from system-specifics and undesired events (like faults or data loss).
+The characteristics may improve over time, for instance, by expanding hardware capabilities, but the user will not have to change their workflow specification.
+Still, for expert users, interfaces for introspecting system state and decision making can always be provided.
+
+\item[Prescriptive Analysis]
+
+Similarly to an SQL Explain statement, a toolset for users and administrators that allows exploring scenarios provides an unprecedented level of introspection. For instance, a prediction for runtime and execution costs of a workflow on a given system is now easier to be achieved.
+Additionally, sharing the workflow description with vendors allows them to conduct predictions for runtime and costs for their solutions.
+The ecosystem may also prescribe alternative systems to use in an open environment, e.g., this part of the workflow should run on data centre A and this part on cloud provider B.
+
+\end{description}
+
+\subsection{System Perspective}
+
+An implementation of the proposed API exploits the user-supplied information and system characteristics intelligently to meet the user expectations and smartly use heterogeneous computing and storage landscapes.
+It is expected that machine learning techniques will be applied to serve the individual aspects and evolve the systems over time.
+
+\begin{description}
+
+\item[Awareness]
+
+The system knows and understands user metadata and the overarching workflows (with the user intentions).
+It is self-aware, knowing the nominal characteristics of the hardware and software components, continually comparing the system and workflow state with the expectations to perform mitigating actions to heal deviations.
+At best, each hardware component would ship with a behavioural model that can be integrated hierarchically up to a global system model.
+With behavioural models, we not only mean performance models but reliability and cost-models as well.
+
+\item[Resource Management]
+
+The system is in charge to manage and provision the available hardware resources autonomously.
+Ultimately, it aims to utilise the individual characteristics of heterogeneous computing and storage landscapes by using intelligent scheduling.
+Data placement and localisation is beyond mere tiering strategies; parts of data may be placed on particular storage technology or replicated in different representations across storage characteristics.
+In addition to that, you are serving different access patterns and workflows at the same time.
+Naturally, the system will replicate (expand) upon the availability of storage space while reducing redundancy under the shortage of space.
+
+\item[Liquid Computing]
+
+The system is in charge to manage and provision the available hardware resources autonomously and to assign computing and storage resources to tasks.
+In addition to that, it may use, e.g., GPU, CPU, and in-network computing capabilities to serve pieces of a single workflow.
+Moreover, as workflows stretch across data centres and over cloud and edge, an environment that schedules and dispatches work and storage efficiently is vital.
+We call this concept \textbf{liquid computing} as the computing resources are dynamically provisioned and assigned while data flows through the system are processed.
+Naturally, processing closer to the data sources is likely to improve system throughput.
+The programming for the processing will be based on a high-level functional language providing primitives for data-flow computing and compiled into a virtual machine or machine code when the code is to be dispatched.
+The capabilities of different hardware components may be limited, realising only a subset of the language which must be taken into account by the scheduler.
+
+\item[Smart Scheduling]
+
+Supplied with user workflows and their characteristics, the system derives execution plans for the computation and make data placement decisions that aim to utilise the available hardware resources efficiently.
+As the API is in charge of both tasks, it may decide to trade computation and storage capacity considering characteristics as costs and energy consumption, for example. Additionally, it can enable automatic recomputation of intermediate states utilising virtualisation and container technologies.
+Similarly, the scheduler may decide to couple subsequent steps of a workflow directly without storing intermediate data products on persistent storage.
+Data might be replicated but enables the system to rerun parts of the workflow in case of a data loss.
+
+Automatic scheduling is key to efficient processing and will allow constant improvement without forcing the user to adjust their workflows.
+In most cases, individual resources are not used exclusively by a single task, but QoS methods ensure that constraints of workflows are met.
+Note that this is a significant change for HPC environments, as computing resources are typically dedicated to specific jobs.
+
+\item[Extensible Ecosystem]
+
+The hardware and software landscape will be open, allowing to integrate solutions from different hardware and software vendors.
+Connected systems may use different interfaces, including traditional POSIX interfaces, NoSQL, or distributed hash tables.
+Imagine that a specific class of workflows performs inefficiently on a given infrastructure indicating that a crucial processing or storage capability is missing.
+Adding new capabilities or resources to the system will allow the scheduler to use them in subsequent user-workflows speeding up the processing, what should be now as easy as adding an appliance to a business environment.
+
+\end{description}
+
+{ \color{blue}{
+
+\section{Interaction with Cylc}
+
+The focus of this paper is to exemplify the I/O optimisations that can be made if the datasets dependencies are established. This information, in fact, is presented in the workflows before the Cylc application, so nothing else will be required from the user. But to have the information explicitly, Cylc needs some changes to be able to:
 
 \begin{enumerate}
 
 \item deliver it together with the workflow, and
 
-\item adapt the resulting workflow to consider the I/O modifications.
+\item adapts the resulting workflow to consider the I/O modifications.
 
 \end{enumerate}
 
-The information about the system architecture can be provided in advance. If that is not possible, we can use monitoring to identify both the architecture and the I/O patterns for the workflow. For that, all we need is to run one cycle of the workflow and detect the patterns associated with it. For this purpose, we intend to use Machine Learning to identify the patterns and adapt the workflow in case of unexpected situations (system is down, nodes are unresponsive, etc.).
+Consider the Cylc suite configuration for a toy monthly cycling workflow in Figure \ref{fig:cylc}. A warm-cycled atmospheric model (\textbf{model}) is followed by postprocessing (\textbf{post}), forecast verification (\textbf{ver}), and product generation (\textbf{prod}) tasks. Also, consider, in addition, a task \textbf{check} that compares some verification metric against products from two cycles earlier.
 
-With this separation of concepts, we can abstract from the worflow what is essential and has to be provided by the user and what a machine should optimise to ensure that the resources available are being used smartly. Everytime parameters are manually tuned, that has a room from improvement by using automatised decision making. And Machine Learning is proven effective in replacing human-beings in several problems.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\columnwidth]{cylc}
+  \caption{Toy example workflow}
+  \label{fig:cylc}
+\end{figure}
 
-About the I/O, the optimisations we can envision are related to the life cycle of datasets and the placement of such datasets into specific memory according to their utilisation. What happens in most current workflows is that usually they use only two types of file systems: \textbf{work} and \textbf{local}. When a task is set to computing, the corresponding dataset is moved to local, processed, and the resulting datasets are moved back to \textbf{work}. If the local filesystem achieves its capacity, then the datasets move back to \textbf{work} and keep running the task until is finished. If the I/O planning is made a priori, this situation can be avoided.
+This suite presents the dependencies among the tasks, but it is missing the information about I/O and storage. The developers usually make the configuration about where the data be stored in stages before Cylc and then it is incorporated into the Cylc process. The decisions about storage are created taking into consideration the architecture in which the workflow will run. Applied scientists should not spend time understanding hardware characteristics, but using their time to develop their work, let the computer do the job the simplest way possible, and just collect and analyse the results. However, nowadays, to be able to run a job in a HPC environment, researchers have to have profound knowledge about their workflow, which is expected, but also about decisions regarding storage, communication, and computing. In this paper, we propose an approach to reduce the burden on researchers and, at the same time, optimise the decisions about jobs running in HPC systems. Once we have an automated decision about where the job will run and how the storage will be managed, the scientists can then run their workflows in any machine without further interactions and even without previous knowledge about the machine architecture.
+
+Figure \ref{fig:cycle1} introduces one cycle of the suite in Figure \ref{fig:cylc} with a simplified notation. The arrows represent the tasks dependencies, but there is no information about the data that are generated. Tasks \textbf{verification} and \textbf{post\,proc} depend on Task \textbf{model}, but does Task \textbf{model} needs to be fully completed to satisfy the dependency? Of course, once Task \textbf{model} is completed, the dependent tasks can be executed, and that is the type of information Cylc has to create and reproduce the workflow.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.4\columnwidth]{cycle1}
+  \caption{First stage workflow}
+  \label{fig:cycle1}
+\end{figure}
+
+The scenario presented in Figure \ref{fig:cycle-io} shows the same cycle of Figure \ref{fig:cycle1}, but the extended information about datasets is introduced.
+In this picture, we have the tasks dependencies, and we explicit the datasets dependencies regarding the tasks that generated them.
+The way data moves through tasks is by creating datasets to pass on the information, including filename and storage destination. The datasets produced by every task are coded in the workflow scripts before Cylc evaluation, and it is just replicated by this tool. The tasks can create a different number of datasets, and these datasets may be necessary for the immediate next task in the current cycle, or tasks in different cycles.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\columnwidth]{cycle-io}
+  \caption{First stage workflow including datasets}
+  \label{fig:cycle-io}
+\end{figure}
+
+Figure \ref{fig:cycle-io-dep} now introduces one example of dependencies among the datasets and tasks: datasets colours indicate which task will use their information and datasets in yellow represent information that will be used in a different cycle. The tricky part when we consider only tasks and not the datasets in the workflow is that it may lead to the false impression that the tasks only depend on the immediately previous one. Note, for instance, that one dataset produced by Task \textbf{model} is later used in Task \textbf{prod\,gen}. That is not an immediate conclusion when we analyse just the arrows for the dependencies. It is clear that Task \textbf{model} is a dependency for Task \textbf{post\,prod}, which is then a dependency for Task \textbf{prod\,gen}, but the crucial information here is that any dataset currently being used in the current cycle can also be used later. From the figure we can also see that Task \textbf{model} will generate one dataset for Task \textbf{post\,proc}, one dataset for Task \textbf{prod\,gen}, two datasets for Task \textbf{verification}, and three datasets for a later cycle.
+The access to this information before the process starts can be used to optimise how these datasets will be stored during the workflow. This information today is static and manual, leaving opportunities for automatisation and optimisations open.
+The idea here is to embrace the concept that tasks dependencies are really datasets dependencies. Once we can insert the datasets explicitly in the workflow, it is easier to see that many optimisations regarding storage can be made.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\columnwidth]{cycle-io-dep}
+  \caption{First stage workflow including datasets and dependencies}
+  \label{fig:cycle-io-dep}
+\end{figure}
+
+Figure \ref{fig:cycle-4} exemplifies another restriction of the way current workflows are being generated. Assume you have, for instance, four cycles of the model you are running. Because the scripts for the workflow consider individual tasks, the datasets generated by them are placed at the same storage type every time. That happens because all datasets generated by Task \textbf{model} will be used by Task \textbf{post\,prod}, so they should stay "closer" when thinking about memory. However, although this decision is based on an optimised concept, it still restricts the way the system deals with the datasets and optimisations that are not made thinking only about the local structure.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\columnwidth]{cycle-4}
+  \caption{Four stages workflow example}
+  \label{fig:cycle-4}
+\end{figure}
+
+Datasets generated by Task \textbf{A} and used by Task \textbf{B} will have the same physical location in the system because there is one fixed script responsible for setting the configuration. Again, such configuration was done manually and with restricted information about the storage and system architecture. It would be interesting to explore the options for the datasets and have them placed in different storage systems. If the lifetime of such dataset is, for instance, two cycles, alternate the datasets into two scratch dataset systems is something that would be a simple job for a tool working on generating filenames and storage. However, manually, that implies at having at least two scripts with information about the different storage and extra work to have better utilisation of the available resources.
+
+The information about the system architecture can be provided in advance as a configuration file, and we can use monitoring to identify the I/O patterns for a specific workflow. For that, all we need is to run one cycle of the workflow and detect the patterns associated with it. For this purpose, we intend to use Machine Learning to identify the patterns and adapt the workflow in case of unexpected situations (the system is down, nodes are unresponsive, etc.).
+With this separation of concepts, we can abstract from the workflow what is essential and has to be provided by the user and what a machine should optimise to ensure that the resources available are being used smartly. Every time parameters are manually tuned, that has a room from improvement by using automatised decision making. And Machine Learning has been proven effective in replacing human-beings in several problems.
+
+Optimisations we can envision about the I/O are related to the life cycle of datasets and the placement of such datasets into specific memory according to their utilisation. What happens in most current workflows is that usually, they use only two types of file systems: \textbf{work} and \textbf{scratch}. When a task is set to computing, the corresponding dataset is moved to \textbf{scratch}, processed, and the resulting datasets are transferred back to \textbf{work}. If the \textbf{scratch} filesystem achieves its capacity, then the datasets move back to \textbf{work} and keep running the task until it is finished. If the I/O planning is made a priori, this situation can be avoided.
+In addition to the file systems described, many supercomputers also have available for the user \textbf{scratch2} fyle systems (sometimes local and global). Therefore, in a real scenario, if the architecture of the machine is known, we can better use its resources.
+
+Figure \ref{fig:lifecycle} finalises the arguments in this paper with a vision of three possible life cycles for one specific dataset. The workflow script defines the way the dataset is handled according to the storage, and the machine has only one of the possible scenarios. The scientist responsible for the script tried to optimise the available resources intuitively before deliver the final version. Would not be better to have the machine automating and making such decisions?
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\columnwidth]{lifecycle}
+  \caption{Life cycle of one dataset: \textbf{C}reate, \textbf{M}igrate, \textbf{R}ead, and \textbf{D}elete}
+  \label{fig:lifecycle}
+\end{figure}
+
+}}
+
+\section{Conclusions}
+\label{sec:conclusions}
+
+
+
+}}
+
+\begin{comment}
+
+and computer-aided Research Development and Engineering (RD\&E)
+
+
+and also on small-scale systems.
+
+For example, Big data tools integrate computing and storage capabilities into a holistic solution demonstrating the benefit of tight integrating for data-driven workflows.
+
+%-- the quality of service features available in hardware is rarely used.
+
+Cloud definition of desired state and contracts.
+
+Indeed many research prototypes address subproblems
+* But not all aspects together
+* Competing approaches; the standardisation we describe here does not compete!
+
+In this paper, we purposely do not mention too many of the ongoing RD\&E in storage and computing.
+
+To wrap up, NGI provides a high-level view on data and processing on heterogeneous platforms while shielding the user from execution details.
+
+Open ...
+
+%Kubernetes
 
 \begin{description}
 
@@ -272,14 +621,8 @@ About the I/O, the optimisations we can envision are related to the life cycle o
 
 \end{description}
 
-In addition to the fyle systems described, many supercomputers have also available for the user \textbf{scratch} fyle systems (sometimes local and global). So, in a real scenario, if the architecture of the machine is known, we can better use its resources.
+%, and data products are generated which are processes that are executed outside of the first simulation.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.6\columnwidth]{move}
-  \caption{Some figure like this one indicating the movements among file systems. There are a lot of them in D4.2.}
-  \label{fig:move}
-\end{figure}
-
+\end{comment}
 
 \end{document}
