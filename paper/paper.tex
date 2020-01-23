@@ -15,6 +15,8 @@
 \usepackage{todonotes}
 \usepackage{comment}
 
+\newcommand{\jk}[1]{\todo[inline]{JK: #1}}
+
 \usepackage{multicol}
 \setlength{\columnsep}{1cm}
 
@@ -69,57 +71,58 @@ From the system perspective, the vision aims to derive an execution plan that ut
 
 \section{Introduction}
 
-High-Performance Computing harnesses the fastest hardware components to enable
-the execution of tightly coupled applications from science and industry.
+High-Performance Computing harnesses the fastest hardware components to enable the execution of tightly coupled applications from science and industry.
 Typical use-cases cover the numerical simulation of physical systems or the analysis of large-scale observational data.
-While the hardware of HPC systems is on the bleeding edge, the software landscape of the infrastructure lacks behind modern concepts found in domains like cloud computing.
-There are various reasons for the lack of innovation, e.g., the market capitalisation is limited; many HPC applications have a lifetime of sometimes several decades\footnote{For example, CTH at Sandia is more than 30 years old, but it has evolved over the years as hardware has changed.
-It is not uncommon that codes take ten years to write and receive a first optimised setup.
-After that, they run for another 30 years with constant evolution based on platform changes and functionality expansions.}; the goal in HPC is to get science done and not to have modern and user-friendly systems.
-Therefore, software developed to target the HPC market is rarely used outside data centres; while there is no reason to use developed applications outside this scope, software to aid developers or for managing HPC infrastructure suffers the same cause.
-Nowadays, HPC adapts infrastructure software from the enterprise and cloud market as much as possible; at best, adapting (stretching) already existing software packages to the needs of HPC.
+In the domain of climate and weather, there is a huge demand for the orchestration of ensembles of simulation models and the generation of data products.
+A weather forecast service such as ECMWF generates .... \jk{Cylc team, please provide some facts}
+Likewise ensembles in climate can ...
 
-From the perspective of big data and cloud solutions, the state-of-the-art in the HPC software ecosystem is perceived as conservative and outdated at least. For example, HPC still uses batch processing and dedicates nodes to the execution of individual applications which were the first concepts implemented at the dawn of computing.
-Similar to writing code in assembler, often it is argued that HPC trades user-friendliness and manageability to obtain the best possible performance.
-However, as the complexity of systems increases and various alternative storage and computing technologies provide unique characteristics, it is barely possible to define optimal data-driven workflows using low-level constructs for the following reasons:
+Based on their needs, the community has developed a software ecosystem that supports them to execute their large-scale workflows.
+While a big leap forward, many processes still require experts.
+For example, porting a workflow from one system to another requires to adjust runtime parameters of applications and to decide how data is managed.
+Since performance is of key importance to large-scale workflows, careful attention must be paid to exploit the system characteristics of the target supercomputer.
+To obtain best performance, a specific supercomputer typically requires substantial changes to the workflow that tailor the workflow to the specific machine.
+For instance, a data-driven workflow may benefit from using a heterogeneous set of computing and storage technology at the same time.
 
-\begin{description}
+Knowing the capabilities, interfaces, and performance characteristics of individual components are mandatory to make the best use of them.
+As the complexity of systems increases and various alternative storage and computing technologies provide unique characteristics, it becomes increasingly difficult even for experts to manually optimize IO in workflows.
 
-  \item[Computing Focus] HPC considers computing, storage, and network as separate resources and focuses on the computing aspects, e.g., I/O requires to retrieve/store data from a computing node.
-  While there are good reasons for this strategy as they provide a beautiful separation of concerns,  there are workflows that run efficiently with alternative organisations because they take into consideration the opportunity to process data closer to storage or between applications.
+In many cases, modifications are not performed because: 1) they are labor intense: any change to the workflow requires careful validation which may not pay off for small scale runs; 2) users are not aware of the potential of the complex system.
 
-  \item[Complexity] A data-driven workflow is highly complex and may benefit from using a heterogeneous set of computing and storage technology at the same time.
-  While there are good reasons for this strategy, there are workflows that also run efficiently with alternative organisations.
+In this paper, we show that knowledge about workflow execution and overall experimental design helps to
+optimise execution of climate and weather workflows and may increase the performance, throughput and cost-efficiency of the environments, providing an incentive to users and data-centres that cannot be neglected.
 
-  Knowing the capabilities, interfaces, and performance characteristics of individual components are mandatory to make the best use of them.
-
-  \item[Portability] Moving from one infrastructure to another or even when modifying the infrastructure requires to rethink and manually adapt the workflow as the characteristics of the overall environment changes.
-
-  \item[Cost-efficiency] It is time-consuming to utilise low-level constructs and they often only increase the performance slightly. Also, the cost of labour must be taken into account.
-  From the perspective of scientists and engineers, the time-to-solution from experimental design to insight matters and the cost-savings for the public data centre can be disregarded.
-
-  \item[Conservative Users] Users are reluctant to change their workflows because they already know that older workflows are proven to be correct and, therefore, they want to avoid the intensive labour to adapt workflows manually.
-
-\end{description}
-
-For these reasons, workflows are typically encoded manually and run suboptimally on HPC systems.
-Additionally, users of public data centre services supply limited information about their experiments, typically the level of detail is like "I need X CPU hours and Y storage capacity" and they have not to prove their ability to use these systems efficiently.
-Still, the systems these workflows run on cost up to 100 million dollars.
-Comparing this amount to experiments conducted in physics like the Large Hadron Collider (LHC) at CERN or the Square Kilometer Array (SKA), it becomes clear that the execution of complex experiments may need years of planning involving the scientists.
-While it is essential to keep some freedom to conduct ad-hoc experiments, we raise the question of what could be achieved by systems and operators knowing workflows in more detail.
-We argue that knowledge about workflow execution and overall experimental design helps to
-optimise execution of workflows and additionally increase the performance, throughput and cost-efficiency of the environments, providing an incentive to users and data-centres that cannot be neglected.
-
-With the Next Generation Interfaces initiative, we aim to define a high-level interface that, firstly, meets the needs of users and data centres, and, secondly, that allows implementations to exploit the capabilities of current and future storage and computing landscapes.
+The paper is organized as follows:
+\jk{TODO}
 
 
 \section{Workflows in Climate/Weather}
 
 This is how workflows in climate/weather look like with Cylc.
-Picture with XIOS software stack (julian' has that one.).
+
+
+\begin{figure}[bt]
+  \includegraphics[width=0.3\textwidth]{layers-xios}
+  \caption{IO Path for an MPI-Parallel Application}
+  \label{fig:layers}
+\end{figure}
+
 
 This section provides an introduction to workflows that solve computational problems, the mandatory steps to encode and setup tasks and describe data, and the relevance of heterogeneous infrastructure to run workflows.
 We focus on high-level considerations to illustrate mandatory concepts.
+
+
+
+Consider the Cylc suite configuration for a toy monthly cycling workflow in Figure \ref{fig:cylc}. A warm-cycled atmospheric model (\textbf{model}) is followed by postprocessing (\textbf{post}), forecast verification (\textbf{ver}), and product generation (\textbf{prod}) tasks. Also, consider, in addition, a task \textbf{check} that compares some verification metric against products from two cycles earlier.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\columnwidth]{cylc}
+  \caption{Example workflow\cite{TODO}}
+  \label{fig:cylc}
+\end{figure}
+
+This suite presents the dependencies among the tasks, but it is missing the information about I/O and storage. The developers usually make the configuration about where the data be stored in stages before Cylc and then it is incorporated into the Cylc process. The decisions about storage are created taking into consideration the architecture in which the workflow will run. Applied scientists should not spend time understanding hardware characteristics, but using their time to develop their work, let the computer do the job the simplest way possible, and just collect and analyse the results. However, nowadays, to be able to run a job in a HPC environment, researchers have to have profound knowledge about their workflow, which is expected, but also about decisions regarding storage, communication, and computing. In this paper, we propose an approach to reduce the burden on researchers and, at the same time, optimise the decisions about jobs running in HPC systems. Once we have an automated decision about where the job will run and how the storage will be managed, the scientists can then run their workflows in any machine without further interactions and even without previous knowledge about the machine architecture.
 
 
 
@@ -330,17 +333,6 @@ The focus of this paper is to exemplify the I/O optimisations that can be made i
 \item adapts the resulting workflow to consider the I/O modifications.
 
 \end{enumerate}
-
-Consider the Cylc suite configuration for a toy monthly cycling workflow in Figure \ref{fig:cylc}. A warm-cycled atmospheric model (\textbf{model}) is followed by postprocessing (\textbf{post}), forecast verification (\textbf{ver}), and product generation (\textbf{prod}) tasks. Also, consider, in addition, a task \textbf{check} that compares some verification metric against products from two cycles earlier.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.9\columnwidth]{cylc}
-  \caption{Toy example workflow}
-  \label{fig:cylc}
-\end{figure}
-
-This suite presents the dependencies among the tasks, but it is missing the information about I/O and storage. The developers usually make the configuration about where the data be stored in stages before Cylc and then it is incorporated into the Cylc process. The decisions about storage are created taking into consideration the architecture in which the workflow will run. Applied scientists should not spend time understanding hardware characteristics, but using their time to develop their work, let the computer do the job the simplest way possible, and just collect and analyse the results. However, nowadays, to be able to run a job in a HPC environment, researchers have to have profound knowledge about their workflow, which is expected, but also about decisions regarding storage, communication, and computing. In this paper, we propose an approach to reduce the burden on researchers and, at the same time, optimise the decisions about jobs running in HPC systems. Once we have an automated decision about where the job will run and how the storage will be managed, the scientists can then run their workflows in any machine without further interactions and even without previous knowledge about the machine architecture.
 
 Figure \ref{fig:cycle1} introduces one cycle of the suite in Figure \ref{fig:cylc} with a simplified notation. The arrows represent the tasks dependencies, but there is no information about the data that are generated. Tasks \textbf{verification} and \textbf{post\,proc} depend on Task \textbf{model}, but does Task \textbf{model} needs to be fully completed to satisfy the dependency? Of course, once Task \textbf{model} is completed, the dependent tasks can be executed, and that is the type of information Cylc has to create and reproduce the workflow.
 
