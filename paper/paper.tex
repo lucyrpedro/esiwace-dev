@@ -49,19 +49,22 @@
 \maketitle
 \thispagestyle{fancy}
 
-{ \color{cyan}{
+{ \color{black}{
 
 \section*{Abstract}
 The efficient, convenient, and robust execution of data-driven workflows and enhanced data management are key for productivity in scientific computing.
 Traditionally, in HPC, the concerns of storage and computing are separated and optimised independently from each other, and, moreover, independently from the needs of end-to-end user workflows that ultimately lead to insight.
-As workflows become increasingly complex and blend beyond data centres while at the same time, storage hierarchies become deeper, the community investigates means to re-organise storage access to utilise such environments fully.
+As climate and weather workflows become increasingly complex and blend beyond data centres while at the same time, storage hierarchies become deeper, the community investigates means to re-organise storage access to utilise such environments fully.
 
-In this white paper, we describe an initiative that aims to tackle storage and computing challenges mentioned above in a holistic approach by fusing state-of-the-art concepts into a revolutionary interface by rethinking how data-driven I/O should be done.
-The tools employed here to achieve this extended workflow are Cylc, DDN IME, and ESDM Scheduler.
-Basically, we believe workflows composed of data, computing, and communication-intensive tasks should drive the interfaces and hardware configurations to best support these programming models.
-From the user perspective, we aim to provide an abstraction to data-driven processing and data management.
-The proposed interface ultimately will increase the opportunity of implementations for smarter scheduling of computing and storage in heterogeneous environments considering characteristics of workflows and data.
-From the system perspective, the vision aims to derive an execution plan that utilises the available hardware and software infrastructure within and across data centres.
+The key contributions of this paper are:
+1) we sketch the visions of an integrated data-driven approach and discuss the challenges and implications of this strategy.
+2) we illustrate an architecture and roadmap that allows the seamless integration into existing workflows.
+The tools employed here to achieve this extended workflow are Cylc, XIOS, DDN IME, and ESDM.
+
+%Basically, we believe workflows composed of data, computing, and communication-intensive tasks should drive the interfaces and hardware configurations to best support the programming models.
+From the user perspective, we ultimately aim to provide an abstraction to data dependencies.
+The proposed changes increase the opportunity of implementations for smarter scheduling of computing and storage in heterogeneous storage environments considering characteristics of workflows and data.
+From the system perspective, the vision aims to derive an execution plan that utilises the available hardware and software infrastructure within a data centre.
 
 
 \section{Introduction}
