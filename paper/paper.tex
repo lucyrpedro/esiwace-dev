@@ -124,6 +124,15 @@ Consider the Cylc suite configuration for a toy monthly cycling workflow in Figu
 
 This suite presents the dependencies among the tasks, but it is missing the information about I/O and storage. The developers usually make the configuration about where the data be stored in stages before Cylc and then it is incorporated into the Cylc process. The decisions about storage are created taking into consideration the architecture in which the workflow will run. Applied scientists should not spend time understanding hardware characteristics, but using their time to develop their work, let the computer do the job the simplest way possible, and just collect and analyse the results. However, nowadays, to be able to run a job in a HPC environment, researchers have to have profound knowledge about their workflow, which is expected, but also about decisions regarding storage, communication, and computing. In this paper, we propose an approach to reduce the burden on researchers and, at the same time, optimise the decisions about jobs running in HPC systems. Once we have an automated decision about where the job will run and how the storage will be managed, the scientists can then run their workflows in any machine without further interactions and even without previous knowledge about the machine architecture.
 
+\section{State of the Art}
+
+\subsection{Storage}
+
+Burst buffers
+
+\section{Potential for IO-Aware Workflows}
+
+Move stuff up, why it is problematic
 
 
 \section{Vision for Workflows Considering IO}
