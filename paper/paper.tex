@@ -93,27 +93,86 @@ In this paper, we show that knowledge about workflow execution and overall exper
 optimise execution of climate and weather workflows and may increase the performance, throughput and cost-efficiency of the environments, providing an incentive to users and data-centres that cannot be neglected.
 
 The paper is organized as follows:
+In \Cref{sec:workflows}, we provide an overview for the specification of workflows in climate and weather, and the involved software stack.
+
 \jk{TODO}
 
 
 \section{Workflows in Climate/Weather}
+\label{sec:workflows}
 
-This is how workflows in climate/weather look like with Cylc.
+In this section, we describe the environment workflows are executed in and the typical software stack.
 
+\subsection{Data Center Infrastructure}
 
-\begin{figure}[bt]
-  \includegraphics[width=0.3\textwidth]{layers-xios}
-  \caption{IO Path for an MPI-Parallel Application}
-  \label{fig:layers}
+To satisfy the needs for different workflows, data centers are providing a infrastructure consisting of compute and storage devices with different characteristics -- that make them more efficient for specific tasks.
+Take for example the supercomputer Mistral at DKRZ that consists of about 3,000 nodes.
+It offers two types of compute nodes equipped with different CPUs and a range of GPU nodes.
+Each node provides a SSD for local storage.
+DKRZ has additionally two shared Lustre file systems with different performance characteristics.
+
+Future centers are likely to have even more heterogeneity: A variety of accelerators (GPU, TPU, FPGAs), active storage, in-memory, and in-network computing technologies provide storage and processing capabilities.
+\Cref{fig:heterogeneous} shows such an environment with a focus on computation and storage.
+Some of these technologies might be local to specific compute nodes or globally available.
+Depending on the need, the characteristics of storage range from predictable low-latency (in-memory storage, NVMe) to online storage (SSD, HDD), and cheap storage for long-term archival (tape).
+\jk{Mention BBs, e.g., DDN IME}
+Naturally, the variety of tasks executed by a single workflow may benefit from the different storage and computing infrastructure.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\columnwidth]{system}
+  \caption{Example of an heterogeneous HPC landscape}
+  \label{fig:heterogeneous}
 \end{figure}
 
 
-This section provides an introduction to workflows that solve computational problems, the mandatory steps to encode and setup tasks and describe data, and the relevance of heterogeneous infrastructure to run workflows.
-We focus on high-level considerations to illustrate mandatory concepts.
+\subsection{Software Stack}
+
+The relevant software stack involved in executing workflows is depicted in \Cref{XXX}
+\jk{insert picture about software stack here}
+
+
+\subsection{IO Stack}
+
+A typical IO stack for a single parallel application like a climate model is shown in \Cref{fig:layers}.
+
+\begin{minipage}{0.2\textwidth}
+\begin{figure}[H]
+  \includegraphics[width=\textwidth]{layers-xios}
+  \caption{IO Path for an MPI-Parallel Application}
+  \label{fig:layers}
+\end{figure}
+\end{minipage}
+\qquad
+\begin{minipage}{0.7\textwidth}
+In our example, we assume the application is parallelized for performance reasons and uses MPI to coordinate the application.
+It may use XIOS to gather data from individual fields which then uses NetCDF4 to store the data as a file.
+XIOS provides a domain-level semantics and ...\jk{TODO}
+Under the hood, NetCDF4 used the HDF5 API and file format.
+Internally, HDF5 uses MPI again and its data types to specify the type of the data stored.
+Finally, data is stored on a parallel file system like Lustre, which -- on the server-side -- stores data in a local file system that is stored on block devices and storage media such as SSDs and HDDs.
+
+Different applications involved in a workflow may use a different IO stack to store their outputs.
+Naturally, the application that has to input previously generated data must use a compatible API to be able to read the specific data format.
+In this figure, for example, XIOS is beneficial for parallel I/O and a process might directly rely on the NetCDF API to read in previous data.
+\end{minipage}
+
+
+\subsection{Cylc}
+
+Cylc is in charge to execute and monitor workflows of which each step is submitted to the batch scheduler of a data center.
+ %, and the relevance of heterogeneous infrastructure to run workflows.
+%We focus on high-level considerations to illustrate mandatory concepts.
 
 
 
-Consider the Cylc suite configuration for a toy monthly cycling workflow in Figure \ref{fig:cylc}. A warm-cycled atmospheric model (\textbf{model}) is followed by postprocessing (\textbf{post}), forecast verification (\textbf{ver}), and product generation (\textbf{prod}) tasks. Also, consider, in addition, a task \textbf{check} that compares some verification metric against products from two cycles earlier.
+Consider the Cylc suite configuration for a toy monthly cycling workflow in Figure \ref{fig:cylc}.
+In this workflow, a warm-cycled atmospheric model (\textbf{model}) simulates the physics from a current state to predict the future after a timestep, for example, after six hours.
+This process is repeated in the model to simulate month and years into the future.
+Once the simulation of a month is computed, the data of this month can be analyzed.
+A user has specified a detailed workflow in a Cylc suite file (shown on the left).
+In this workflow, the \textbf{model} is followed by postprocessing (\textbf{post}), forecast verification (\textbf{ver}), and product generation (\textbf{prod}) tasks.
+Also, consider, in addition, a task \textbf{check} that compares some verification metric against products from two cycles earlier.
 
 \begin{figure}[H]
   \centering
@@ -122,24 +181,29 @@ Consider the Cylc suite configuration for a toy monthly cycling workflow in Figu
   \label{fig:cylc}
 \end{figure}
 
-This suite presents the dependencies among the tasks, but it is missing the information about I/O and storage. The developers usually make the configuration about where the data be stored in stages before Cylc and then it is incorporated into the Cylc process. The decisions about storage are created taking into consideration the architecture in which the workflow will run. Applied scientists should not spend time understanding hardware characteristics, but using their time to develop their work, let the computer do the job the simplest way possible, and just collect and analyse the results. However, nowadays, to be able to run a job in a HPC environment, researchers have to have profound knowledge about their workflow, which is expected, but also about decisions regarding storage, communication, and computing. In this paper, we propose an approach to reduce the burden on researchers and, at the same time, optimise the decisions about jobs running in HPC systems. Once we have an automated decision about where the job will run and how the storage will be managed, the scientists can then run their workflows in any machine without further interactions and even without previous knowledge about the machine architecture.
+This suite presents the dependencies among the tasks, but it is missing the information about I/O and storage.
+The developers make the configuration about parallelism and where the data be stored in a script file that is executed for the specific task.
+The decisions about storage must take into consideration the architecture in which the workflow will run.
+
 
 \section{State of the Art}
 
-\subsection{Storage}
+Other tools for workflow handling, how is this information transported?
+dataspaces
+ADIOS
 
-Burst buffers
 
 \section{Potential for IO-Aware Workflows}
 
-Move stuff up, why it is problematic
+Applied scientists should not spend time understanding hardware characteristics, but using their time to develop their work, let the computer do the job the simplest way possible, and just collect and analyse the results.
+However, nowadays, to be able to run a job in a HPC environment efficiently, researchers have to have profound knowledge about their workflow, which is expected, but also about decisions regarding storage, communication, and computing.
+
+In this paper, we propose an approach to reduce the burden on researchers and, at the same time, optimise the decisions about jobs running in HPC systems. Once we have an automated decision about where the job will run and how the storage will be managed, the scientists can then run their workflows in any machine without further interactions and even without previous knowledge about the machine architecture.
 
 
 \section{Vision for Workflows Considering IO}
 
 What changes now in terms of specification?
-
-\subsection{Potential Benefit}
 
 
 \subsection{Workflow Description}
@@ -168,44 +232,11 @@ Note that a realistic workflow will be much more complex and involves not a sing
 \item Data can be annotated with metadata describing its content, the expected data life cycle information, e.g., the value of data and how long should it be kept;
 
 \item tasks can be annotated with the necessary information to start processing or with performance models that bound the expectations for resources (time, memory, storage capacity).
-
 \end{itemize}
 
-\subsection{Task Definition}
 
-The high-level interaction of a task with its dependencies is generally specified in the workflow.
-A computing task is encoded in a programming language by a developer\footnote{We often treat developer and HPC user as synonyms as a fraction of HPC users are developers for parallel applications to some extent.}.
-A team of developers encodes the algorithm that solves the problem. In many cases, scientists that generate a numerical simulation implement the model programmatically.
-Often, they use existing libraries that provide a piece of functionality or infrastructure.
-In the design phase of the program, a parallel programming paradigm and suitable data structures that allow efficient data processing are chosen.
-In the world of parallel computing, the developer must also consider strategies to parallelise the code and data processing, which often involve the use of APIs and runtime systems that allow the efficient usage of supercomputers.
+\subsection{Potential Benefit}
 
-While most parts of the algorithm can be a tightly coupled simulation, as part of the algorithm, the input data must be fetched.
-
-Typically, before the input data can be used, some kind of pre-processing must be applied. Similarly, in the output, several known post-processing steps may be applied.
-Also, the programmer is responsible for making the optimal decisions on how to map data structures from memory to I/O calls and place these datasets onto storage systems.
-We consider that pre/post-processing are part of the data-driven scope of workflows.
-Indeed, we claim that the programmer should be able to define the input/output on an abstract fashion and connect processing steps as part of the general workflow.
-
-\subsection{Heterogeneous Infrastructure}
-
-The variety of tasks executed by a single workflow may benefit from heterogeneous storage and computing infrastructure and potentially even span multiple locations.
-\Cref{fig:heterogeneous} shows such an environment with a focus on computation and storage.
-A variety of accelerators (GPU, TPU, FPGAs), active storage, in-memory, and in-network computing technologies provide processing capabilities across and beyond a HPC centre optimised for specific workloads.
-Data centres typically provide more than one storage and computing class with different characteristics to optimise cost and efficiency.
-Likewise, storage is deployed data centre wide, locally available to individual nodes, or subsets of nodes (e.g., racks). Depending on the need, the characteristics range from predictable low-latency (in-memory storage, NVMe) to online storage (SSD, HDD), and cheap storage for long-term archival (tape).
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.6\columnwidth]{system}
-  \caption{Example of an heterogeneous HPC landscape}
-  \label{fig:heterogeneous}
-\end{figure}
-
-The processing across geographic locations is nowadays mandatory to tame the data volumes of observational or simulation data.
-Also, the lines between cloud computing and HPC are blurry. Attempts are made to augment processing by flexibly migrate bursts of computation to cloud environments, ingest data from cloud sources or provided to customers.
-Consider a simple scenario where sensor data captured is pre-processed (cleaned) locally, then enriched with an additional data source in a small-scale HPC facility or by using fog computing, and then finally transferred to a data centre that performs the number crunching and generates data products.
-These data products can also be made available on cloud storage to customers for individual processing.
 
 { \color{black}{
 
