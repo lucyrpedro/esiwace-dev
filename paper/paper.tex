@@ -110,6 +110,9 @@ Take for example the supercomputer Mistral at DKRZ that consists of about 3,000 
 It offers two types of compute nodes equipped with different CPUs and a range of GPU nodes.
 Each node provides a SSD for local storage.
 DKRZ has additionally two shared Lustre file systems with different performance characteristics.
+The user can access both file systems as a work and scratch file system.
+While data is kept on the work file system indefinitely its available space is limited by a quota.
+The scratch file system allows to store more data but data is automatically deleted after a period of time.
 
 Future centers are likely to have even more heterogeneity: A variety of accelerators (GPU, TPU, FPGAs), active storage, in-memory, and in-network computing technologies provide storage and processing capabilities.
 \Cref{fig:heterogeneous} shows such an environment with a focus on computation and storage.
@@ -130,7 +133,8 @@ Naturally, the variety of tasks executed by a single workflow may benefit from t
 
 The relevant software stack involved in executing workflows is depicted in \Cref{XXX}
 \jk{insert picture about software stack here}
-
+To solve a computational problem, we can consider describing the necessary steps from the start to the insight as a workflow.
+Cylc executes a workflow description comprising of the individual data processing steps and the dependencies among them.
 
 \subsection{IO Stack}
 
@@ -185,6 +189,32 @@ This suite presents the dependencies among the tasks, but it is missing the info
 The developers make the configuration about parallelism and where the data be stored in a script file that is executed for the specific task.
 The decisions about storage must take into consideration the architecture in which the workflow will run.
 
+\subsection{Data Management}
+
+The scripts for the tasks in Cylc define how a dataset is stored on the available storage systems.
+\Cref{fig:lifecycle} shows three possible life cycles for a specific dataset and the access pattern to the dataset.
+Consider that the machine has three file systems: a fast scratch file system on which data may reside only for a week, a slower work file system, and each node has a local file system.
+The dataset could be stored on the local storage first to avoid congestion on the work file system, then be migrated to work file system where subsequent tasks of the workflow may read it multiple times.
+At the end, this dataset might be an intermediate product that can then be deleted.
+Alternatively, it could be stored on the scratch file system immediately and accessed there.
+However, that would require that the last read access is within the 7-day period before files on scratch are automatically removed.
+The last scenario shows the case where data is created on work by a task but then copied to a local node to allow read accesses of subsequent tasks.
+This might be beneficial for small random accesses.
+However, it would require that subsequent tasks are placed on the same machine where data is now copied to.
+
+The scientist responsible for the workflow must optimise the available resources intuitively.
+These are just examples and scientists perform such kind of optimizations already manually.
+
+
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\columnwidth]{lifecycle}
+  \caption{Life cycle of one dataset: \textbf{C}reate, \textbf{M}igrate, \textbf{R}ead, and \textbf{D}elete}
+  \label{fig:lifecycle}
+\end{figure}
+
 
 \section{State of the Art}
 
@@ -193,28 +223,26 @@ dataspaces
 ADIOS
 
 
-\section{Potential for IO-Aware Workflows}
+\section{Vision for IO-Aware Workflows}
 
 Applied scientists should not spend time understanding hardware characteristics, but using their time to develop their work, let the computer do the job the simplest way possible, and just collect and analyse the results.
 However, nowadays, to be able to run a job in a HPC environment efficiently, researchers have to have profound knowledge about their workflow, which is expected, but also about decisions regarding storage, communication, and computing.
 
-In this paper, we propose an approach to reduce the burden on researchers and, at the same time, optimise the decisions about jobs running in HPC systems. Once we have an automated decision about where the job will run and how the storage will be managed, the scientists can then run their workflows in any machine without further interactions and even without previous knowledge about the machine architecture.
-
-
-\section{Vision for Workflows Considering IO}
-
-What changes now in terms of specification?
+We propose an approach to reduce the burden on researchers and, at the same time, optimise the decisions about jobs running in HPC systems.
+Once we have an automated decision about where the job will run and how the storage will be managed, the scientists can then run their workflows in any machine without further interactions and even without previous knowledge about the machine architecture.
 
 
 \subsection{Workflow Description}
 
-To solve a computational problem, we can consider describing the necessary steps from the start to the insight as a workflow.
-Such a workflow description must comprise of the individual data processing steps, the dependencies among them, the input, and the expected products. An example execution of a workflow is illustrated in \Cref{fig:workflow} as a graph.
+So far, Cylc allowed to specify tasks, and the dependencies among them.
+We aim to enrich this information with characteristics for input, and the products.
+An example workflow containing data products is illustrated in \Cref{fig:workflow}.
 Arrows indicate dependencies between nodes that represent tasks and data.
 In the example, Task\,1 needs two datasets to perform its work, it directly communicates with Task\,2 and produces Product\,1.
 Most of the workflow can run automatically except the manual quality control of the products and the final data usage of Product\,3 in the end.
-The last step represents the typical uncertainty of data reuse. When this workflow is analysed, it is unclear how Product\,3 will be used further, but, apparently, it will be.
-Further workflows that use the data may be created similarly and use products as input.
+The last step represents the typical uncertainty of data reuse, i.e., it is unclear how Product\,3 will be used further.
+In this approach, each task is annotated with the required inputs and the generated products.
+Each data product is annotated with metadata such as data life cycle information, e.g., the value of data and how long should it be kept.
 
 \begin{figure}[H]
   \centering
@@ -223,19 +251,14 @@ Further workflows that use the data may be created similarly and use products as
   \label{fig:workflow}
 \end{figure}
 
-Note that a realistic workflow will be much more complex and involves not a single parallel job execution, but many to generate a robust answer to the problem in question. Extra information can be, for instance:
-
-\begin{itemize}
-
-\item The nodes can be annotated with characteristics of the individual steps;
-
-\item Data can be annotated with metadata describing its content, the expected data life cycle information, e.g., the value of data and how long should it be kept;
-
-\item tasks can be annotated with the necessary information to start processing or with performance models that bound the expectations for resources (time, memory, storage capacity).
-\end{itemize}
-
 
 \subsection{Potential Benefit}
+
+
+
+\section{Design}
+What changes now in terms of specification?
+
 
 
 { \color{black}{
@@ -421,15 +444,6 @@ With this separation of concepts, we can abstract from the workflow what is esse
 
 Optimisations we can envision about the I/O are related to the life cycle of datasets and the placement of such datasets into specific memory according to their utilisation. What happens in most current workflows is that usually, they use only two types of file systems: \textbf{work} and \textbf{scratch}. When a task is set to computing, the corresponding dataset is moved to \textbf{scratch}, processed, and the resulting datasets are transferred back to \textbf{work}. If the \textbf{scratch} filesystem achieves its capacity, then the datasets move back to \textbf{work} and keep running the task until it is finished. If the I/O planning is made a priori, this situation can be avoided.
 In addition to the file systems described, many supercomputers also have available for the user \textbf{scratch2} fyle systems (sometimes local and global). Therefore, in a real scenario, if the architecture of the machine is known, we can better use its resources.
-
-Figure \ref{fig:lifecycle} finalises the arguments in this paper with a vision of three possible life cycles for one specific dataset. The workflow script defines the way the dataset is handled according to the storage, and the machine has only one of the possible scenarios. The scientist responsible for the script tried to optimise the available resources intuitively before deliver the final version. Would not be better to have the machine automating and making such decisions?
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.6\columnwidth]{lifecycle}
-  \caption{Life cycle of one dataset: \textbf{C}reate, \textbf{M}igrate, \textbf{R}ead, and \textbf{D}elete}
-  \label{fig:lifecycle}
-\end{figure}
 
 }}
 
