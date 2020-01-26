@@ -2408,16 +2408,16 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.979899"
-     inkscape:cx="300.01399"
-     inkscape:cy="446.68954"
+     inkscape:zoom="0.94712501"
+     inkscape:cx="393.60203"
+     inkscape:cy="520.52263"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="true"
      inkscape:window-width="1920"
-     inkscape:window-height="1172"
+     inkscape:window-height="1025"
      inkscape:window-x="0"
-     inkscape:window-y="0"
+     inkscape:window-y="27"
      inkscape:window-maximized="1"
      fit-margin-top="0"
      fit-margin-left="0"
@@ -2431,7 +2431,8 @@
      inkscape:snap-bbox-midpoints="false"
      inkscape:object-paths="true"
      inkscape:snap-intersection-paths="true"
-     inkscape:snap-nodes="false">
+     inkscape:snap-nodes="false"
+     showguides="false">
     <inkscape:grid
        type="xygrid"
        id="grid304"
@@ -2446,7 +2447,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -2929,7 +2930,7 @@
            height="102.14285"
            x="143.57143"
            y="506.38318" /></flowRegion><flowPara
-         id="flowPara17855"></flowPara></flowRoot>    <flowRoot
+         id="flowPara17855" /></flowRoot>    <flowRoot
        xml:space="preserve"
        id="flowRoot17857"
        style="font-style:normal;font-weight:normal;font-size:40px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
@@ -2940,7 +2941,7 @@
            height="65.714287"
            x="185.71428"
            y="533.52606" /></flowRegion><flowPara
-         id="flowPara17863"></flowPara></flowRoot>    <text
+         id="flowPara17863" /></flowRoot>    <text
        id="text2855-4"
        y="168.32439"
        x="-7.9589868"
