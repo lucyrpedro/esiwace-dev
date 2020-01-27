@@ -176,13 +176,13 @@ In this workflow, a warm-cycled atmospheric model (\textbf{model}) simulates the
 This process is repeated in the model to simulate month and years into the future.
 Once the simulation of a month is computed, the data for this month can be analysed.
 {\color{cyan}{This is wuite strange for me. It means that only after a month is completed one will use the information to start previsions? I would expect it to be more like a window-month than a fixed month, no?}}
-A user has specified a detailed workflow in a Cylc suite file (shown on the left).
+A user has specified a detailed workflow in a Cylc suite file (\texttt{suite.rc}).
 In this workflow, the \textbf{model} is followed by postprocessing (\textbf{post}), forecast verification (\textbf{ver}), and product generation (\textbf{prod}) tasks.
 Also, consider, in addition, a task \textbf{check} that compares some verification metric against products from two cycles earlier.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.9\columnwidth]{cylc}
+  \includegraphics[width=0.9\columnwidth]{cylc1}
   \caption{Example workflow\cite{8675433}}
   \label{fig:cylc}
 \end{figure}
@@ -196,11 +196,11 @@ The developers make the configuration about parallelism and where the data is st
 The scripts for the tasks in Cylc define how the data is stored on the available storage systems.
 \Cref{fig:lifecycle} shows three possible life cycles and the access pattern for a specific dataset.
 Consider that the machine has three file systems: a fast \textbf{scratch} file system on which data may reside only for a week, a slower \textbf{work} file system, and each node has a \textbf{local} file system.
-The dataset could be stored on the \textbf{local} storage first to avoid congestion on the \textbf{work} file system, then be migrated to \textbf{work} file system where subsequent tasks of the workflow may read it multiple times.
+As shown in \Cref{fig:lifecycle}(a), the dataset could be stored on the \textbf{local} storage first to avoid congestion on the \textbf{work} file system, then be migrated to \textbf{work} file system where subsequent tasks of the workflow may read it multiple times.
 In the end, this dataset might be an intermediate product that can then be deleted.
-Alternatively, it could be stored on the \textbf{scratch} file system immediately and accessed there.
+Alternatively (\Cref{fig:lifecycle}(b)), it could be stored on the \textbf{scratch} file system immediately and accessed there.
 However, that would require that the last read access happens before files on \textbf{scratch} are automatically removed.
-The last scenario shows the case where data is created on \textbf{work} by a task, but then it is copied to a \textbf{local} node to allow read accesses of subsequent tasks which might be beneficial for small random accesses.
+The last scenario (\Cref{fig:lifecycle}(c)) presents the case where data is created on \textbf{work} by a task, but then it is copied to a \textbf{local} node to allow read accesses of subsequent tasks which might be beneficial for small random accesses.
 However, it would require that the subsequent tasks are placed on the same machine where data is now stored.
 The scientist responsible for the workflow must optimise the available resources intuitively.
 These are just examples and currently the scientists perform such kind of optimisations manually.
