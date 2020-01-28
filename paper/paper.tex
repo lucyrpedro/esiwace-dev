@@ -16,8 +16,10 @@
 \usepackage{comment}
 \usepackage{ulem}
 \usepackage{array}
+\usepackage{subcaption}
 
 \newcommand{\jk}[1]{\todo[inline]{JK: #1}}
+\newcommand{\lr}[1]{\todo[inline]{LR: #1}}
 
 \usepackage{multicol}
 \setlength{\columnsep}{1cm}
@@ -55,14 +57,11 @@
 
 \section*{Abstract}
 The efficient, convenient, and robust execution of data-driven workflows and enhanced data management are key for productivity in scientific computing.
-\sout{{\color{blue}{
-Traditionally, in HPC, the concerns of storage and computing are separated and optimised independently from each other, and, moreover, independently from the needs of end-to-end user workflows that ultimately lead to insight.}}}
-{\color{cyan}{
-Traditionally, in HPC, the concerns of storage and computing are separated and optimised independently from each other and from the needs of end-to-end user.}}
+Traditionally, in HPC, the concerns of storage and computing are separated and optimised independently from each other and from the needs of end-to-end user.
 As climate and weather workflows become increasingly complex and blend beyond data centres while, at the same time, storage hierarchies become deeper, the community investigates means to re-organise storage access to utilise such environments fully.
 
 The key contributions of this paper are:
-1) we sketch the visions of an integrated data-driven approach and discuss the challenges and implications of this strategy.
+1) we sketch the visions of an integrated data-driven approach and discuss the challenges and implications of this strategy;
 2) we illustrate architecture and roadmap that allows the seamless integration into existing workflows.
 The tools employed here to achieve this extended workflow are Cylc, XIOS, DDN IME, and ESDM.
 
@@ -80,7 +79,7 @@ In the domain of climate and weather, there is a considerable demand for the orc
 A weather forecast service such as ECMWF generates .... \jk{Cylc team, please provide some facts}
 Likewise, ensembles in climate can ...
 
-Based on their needs, the {\color{cyan}{HPC}} community has developed a software ecosystem that supports them to execute their large-scale workflows.
+Based on their needs, the HPC community has developed a software ecosystem that supports them to execute their large-scale workflows.
 While the current advances correspond to a big leap forward, many processes still require experts.
 For example, porting a workflow from one system to another requires to adjust runtime parameters of applications and to decide how data is managed.
 Since performance is of crucial importance to large-scale workflows, careful attention must be paid to exploit the system characteristics of the target supercomputer.
@@ -88,10 +87,9 @@ To obtain the best performance, a specific supercomputer typically requires subs
 For instance, a data-driven workflow may benefit from using a heterogeneous set of computing and storage technology at the same time.
 
 Knowing the capabilities, interfaces, and performance characteristics of individual components are mandatory to make the best use of them.
-As the complexity of systems increases and alternative storage and computing technologies provide unique characteristics, it becomes increasingly difficult even for experts to manually optimise I/O in workflows. {\color{cyan}{First time I/O is mentioned. I would change to something like... it becomes increasingly difficult even for experts to manually optimise resources (other stuff) and, in particular, I/O in such workflows.}}
-In many cases, modifications are not performed because: 1) they are labour intense: any change to the workflow requires careful validation which may not pay off for small scale runs; 2) users are not aware of the potential of the complex system.
+As the complexity of systems increases and alternative storage and computing technologies provide unique characteristics, it becomes increasingly difficult even for experts to manually optimise resource usage in workflows. In many cases, modifications are not performed because: 1) they are labour intense: any change to the workflow requires careful validation which may not pay off for small scale runs; 2) users are not aware of the potential of the complex system.
 
-In this paper, we show that knowledge about workflow execution and overall experimental design helps to
+In this paper, we show that knowledge about Input/Output of workflow tasks and overall experimental design helps to
 optimise the execution of climate and weather workflows and may increase the performance, throughput and cost-efficiency of the environments, providing an incentive to users and data-centres that cannot be neglected.
 
 The paper is organised as follows:
@@ -108,11 +106,10 @@ In this section, we describe how the environment workflows are executed in the t
 \subsection{Data Center Infrastructure}
 
 To satisfy the needs for different workflows, data centres are providing a infrastructure consisting of computing and storage devices with different characteristics which makes them more efficient for specific tasks.
-Take, for example, the supercomputer Mistral at DKRZ that consists of about {\color{cyan}{about?}} 3,000 nodes.
+Take, for example, the supercomputer Mistral at DKRZ that consists of 3,321 nodes.
 It offers two types of compute nodes equipped with different CPUs and a range of GPU nodes.
 Each node provides an SSD for local storage and DKRZ has additionally two shared Lustre file systems with different performance characteristics.
-The user can access both file systems \sout{{\color{blue}{as a work and scratch file system}}}. {\color{cyan}{as work and scratch file systems.}}
-While data is kept on the work file system indefinitely, its available space is limited by a quota.
+Individual users and projects are mapped to one file system explicitly and users can access it as work or scratch file system: While data is kept on the work file system indefinitely, its available space is limited by a quota.
 The scratch file system allows to store more data, but data is automatically deleted after some time.
 
 Future centres are expected to have even more heterogeneity. A variety of accelerators (GPU, TPU, FPGAs), active storage, in-memory, and in-network computing technologies provide storage and processing capabilities.
@@ -134,7 +131,7 @@ Naturally, the variety of tasks executed by a single workflow may benefit from t
 
 The relevant software stack involved in executing workflows is depicted in \Cref{XXX}
 \jk{insert picture about software stack here}
-To solve a computational problem, we can consider describing the necessary steps from the start to the insight {\color{cyan}{insight? I really don't undestand some of your uses of this word.}} as a workflow.
+To solve a computational problem, we can consider describing the necessary steps from the start to the scientific insight generated by the workflow.
 Cylc executes a workflow description comprising of the individual data processing steps and the dependencies among them.
 
 \subsection{I/O Stack}
@@ -150,13 +147,12 @@ A typical I/O stack for a single parallel application like a climate model is sh
 \end{minipage}
 \qquad
 \begin{minipage}{0.7\textwidth}
-In our example, we assume the application is parallelised for performance reasons and uses MPI to \sout{{\color{blue}{coordinate}}} {\color{cyan}{run}} the application.
+In our example, we assume the application is parallelised for performance reasons and uses MPI to run the application.
 It may use XIOS to gather data from individual fields which then uses NetCDF4 to store the data as a file.
 XIOS provides a domain-level semantics and ...\jk{TODO}
 Under the hood, NetCDF4 used the HDF5 API and file format.
 Internally, HDF5 uses MPI again and its data types to specify the nature of the data stored.
-\sout{{\color{blue}{Finally, data is stored on a parallel file system like Lustre, which, on the server-side, stores data in a local file system that is stored on block devices and storage media such as SSDs and HDDs.}}}
-{\color{cyan}{Finally, data is stored on a parallel file system like Lustre, which, on the server-side, stores data in local file system as block devices on storage media such as SSDs and HDDs.}}
+Finally, data is stored on a parallel file system like Lustre, which, on the server-side, stores data in local file system as block devices on storage media such as SSDs and HDDs.
 
 Different applications involved in a workflow may use a different I/O stack to store their outputs.
 Naturally, the application that inputs previously generated data must use a compatible API to be able to read the specific data format.
@@ -175,15 +171,14 @@ Cylc is in charge to execute and monitor workflows in which each step is submitt
 Consider the Cylc suite configuration for a toy monthly cycling workflow in Figure \ref{fig:cylc}.
 In this workflow, a warm-cycled atmospheric model (\textbf{model}) simulates the physics from a current state to predict the future after a timestep, for example, after six hours.
 This process is repeated in the model to simulate month and years into the future.
-Once the simulation of a month is computed, the data for this month can be analysed.
-{\color{cyan}{This is wuite strange for me. It means that only after a month is completed one will use the information to start previsions? I would expect it to be more like a window-month than a fixed month, no?}}
+Once the simulation of any month is computed, the data for this month becomes available and can be analysed.
 A user has specified a detailed workflow in a Cylc suite file (\texttt{suite.rc}).
 In this workflow, the \textbf{model} is followed by postprocessing (\textbf{post}), forecast verification (\textbf{ver}), and product generation (\textbf{prod}) tasks.
 Also, consider, in addition, a task \textbf{check} that compares some verification metric against products from two cycles earlier.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.9\columnwidth]{cylc1}
+  \includegraphics[width=0.9\columnwidth]{cylc1.png}
   \caption{Example workflow\cite{8675433}}
   \label{fig:cylc}
 \end{figure}
@@ -207,10 +202,19 @@ The scientist responsible for the workflow must optimise the available resources
 These are just examples and currently the scientists perform such kind of optimisations manually.
 
 
-\begin{figure}[H]
+\begin{figure}[tb]
   \centering
-  \includegraphics[width=0.6\columnwidth]{lifecycle}
-  \caption{Life cycle of one dataset: \textbf{C}reate, \textbf{M}igrate, \textbf{R}ead, and \textbf{D}elete}
+  \begin{subfigure}{.49\textwidth}
+  \includegraphics[width=\columnwidth]{lifecycle-1}
+  \caption{Local and work}
+  \end{subfigure}
+  \begin{subfigure}{.49\textwidth}
+  \includegraphics[width=\columnwidth]{lifecycle-2}
+  \caption{Scratch only}
+  \end{subfigure}
+
+
+  \caption{Alternative life cycles for mapping a dataset to storage and the operations: \textbf{C}reate, \textbf{M}igrate, \textbf{R}ead, and \textbf{D}elete}
   \label{fig:lifecycle}
 \end{figure}
 
@@ -219,9 +223,7 @@ These are just examples and currently the scientists perform such kind of optimi
 
 Other tools for workflow handling, how is this information transported?
 
-dataspaces
-
-ADIOS
+dataspaces + ADIOS + in-situ
 
 
 \section{Vision for I/O-Aware Workflows}
