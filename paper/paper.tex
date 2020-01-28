@@ -127,7 +127,7 @@ Naturally, the variety of tasks executed by a single workflow may benefit from t
 \end{figure}
 
 
-\subsection{I/O Stack}
+\subsection{I/O Stack of a Parallel Application}
 
 A typical I/O stack for a single parallel application like a climate model is shown in \Cref{fig:layers}.
 
@@ -160,7 +160,7 @@ The relevant software stack involved in executing a workflow is depicted in \ref
 As a preliminary, the user had specified a Cylc suite representing the workflow and provided scripts files for the individual tasks to execute; now the user enacts Cylc to start the workflow.
 In the following, each stage of the execution is described further.
 
-\begin{figure}[H]
+\begin{figure}[bt]
   \centering
   \includegraphics[scale=1.4]{stages}
   \caption{Software Stack and Stages of Execution}
@@ -243,6 +243,10 @@ These are just examples and currently the scientists perform such kind of optimi
   \caption{Scratch only}
   \end{subfigure}
 
+  \begin{subfigure}{.45\textwidth}
+  \includegraphics[width=0.9\columnwidth]{lifecycle-3}
+  \caption{Local and work}
+  \end{subfigure}
 
   \caption{Alternative life cycles for mapping a dataset to storage and the operations: \textbf{C}reate, \textbf{M}igrate, \textbf{R}ead, and \textbf{D}elete}
   \label{fig:lifecycle}
@@ -440,46 +444,63 @@ With this separation of concepts, we can abstract from the workflow what is esse
 Optimisations we can envision about the I/O are related to the life cycle of datasets and the placement of such datasets into specific memory according to their utilisation. What happens in most current workflows is that usually, they use only two types of file systems: \textbf{work} and \textbf{scratch}. When a task is set to computing, the corresponding dataset is moved to \textbf{scratch}, processed, and the resulting datasets are transferred back to \textbf{work}. If the \textbf{scratch} filesystem achieves its capacity, then the datasets move back to \textbf{work} and keep running the task until it is finished. If the I/O planning is made a priori, this situation can be avoided.
 In addition to the file systems described, many supercomputers also have available for the user \textbf{scratch2} fyle systems (sometimes local and global). Therefore, in a real scenario, if the architecture of the machine is known, we can better use its resources.
 
-\section{Stages}
+\subsection{Modified Software Stack}
 
-Figure \ref{fig:stages} illustrates the stages of a workflow being processed by Cylc. Each stage has a description about what happens with the current methodologies and the increments we propose in this vision paper.
+The relevant software stack involved in executing a workflow with our IO-aware scheduler is depicted in \Cref{fig:stages-io}.
+In the following, we describe the modifications to the current execution (described in \Cref{fig:stages}) we propose in this vision paper.
+Firstly, the end-user now has to provide an additional file that covers the IO information for each task; slight changes have to be made to the scripts that are executed, these will be discussed below.
 
-\begin{figure}[H]
+\begin{figure}[tb]
   \centering
-  \includegraphics[scale=1.4]{stages}
-  \caption{Stages}
-  \label{fig:stages}
+  \includegraphics[scale=1.4]{stages-io}
+  \caption{Software Stack and Stages of Execution with our IO-Aware Scheduler}
+  \label{fig:stages-io}
 \end{figure}
 
+
 \begin{enumerate}
-
-  \item \textbf{Suite}\ \ The user runs Cylc to start a suite. The file \texttt{suite.rc} is created.
-
-  \textbf{Suite + I/O Vision}\ \ Together with the file \texttt{suite.rc}, the user will be responsible to insert the file \texttt{suite-io.rc}, as described in Figure/Section.
-
   \item \textbf{Cylc}\ \ Cylc parses the suite file, generate dependencies and defines a schedule for the execution.
+  Now, Cylc calls EIOS to identify potential to optimize the schedule.
+  EIOS may have decided that subsequent jobs shall be placed on the same node or to reorder the execution of some jobs.
+  Also it may have provided information for conducting data migration.
 
-  \textbf{Cylc + I/O Vision}\ \ Cylc will also call EWIOScheduler to potentially reprioritise the execution order of the tasks.
-  EWIOScheduler will read both suite files to make suggestions, without enforcing any changings at this moment {\color{cyan}{why?}}.
+  \item \textbf{EIOS}\ \
+  Reads information the workflow: the original suite file and the IO suit file.
+  Acts depending on the stage of execution, i.e., we could be preparing execution in Cylc or we are already inside a script.
+  It loads the \texttt{esdm.conf} file that contains the information about the available storage technology in the data center and their characteristics.
+  Provides the information how to prioritize IO targets.
 
-  \item \textbf{Slurm}\ \ Once a task can be executed (dependencies are fulfilled), Cylc generates on the fly a Slurm script with the required metadata for Slurm, invokes the user-defined script for that task, and runs Slurm to queue the process.
+  A data management service may run as a service and purge or migrate data according to user life cycle specification and EIOS information.
 
-  \textbf{Slurm + I/O Vision}\ \ Assuming the suggestions made by EWIOScheduler are acepted, Cylc will change the metadata of the Slurm script. Optimisation in this stage can be, for instance, defining places for a job on the same nodes as a previous job to reuse local data {\color{cyan}{NextgenIO?}} and adding to the metadata information about migrating the data.
+  \item \textbf{Slurm}\ \ Schedules the execution of the job considering the scheduling policy of the data center.
+  Cylc may now have added a constraint to place a job on the same nodes as a previous job which is handled by the modified Slurm.
+  Also, if migrations have to be performed before or after a job is run, Slurm will administer them.
 
-  \item \textbf{Task}\ \ Once the task is ready to be dispatched by Slurm, it is started on the supercomputer.
+  \item \textbf{Job}\ \ The user-provided script is executed on a single node assigned to the job.
 
-  \textbf{Task + I/O Vision}\ \ The optimisation defined in the previous stage are implemented. For instance, if migrations have to be performed before or after a job is run, \sout{{\color{cyan}{it}}} {\color{cyan}{Slurm}} will administer them.
+  The script has set environment variables containing information about the Cylc execution (e.g., task in the workflow) and Slurm job (e.g., number of nodes).
 
-  \item \textbf{Script}\ \ The shell script executes the users-provided instructions allowing Cylc to generate its internal variables. To create the filenames, Cylc reads templates provided by the user that defines the storage location to be used.
+  \item \textbf{Script}\ \ The shell-script executes the sequence of commands.
 
-  \textbf{Script + I/O Vision}\ \ The way the filenames are generated are now slightly different. We will use a new command that invokes ESWIOSchedule again {\color{cyan}{Slurm is calling ESWIOSchedule?}} to read the suite files and generate information for ESDM about where to prioritise {\color{cyan}{prioritise ==> Is this the right word here?}} data placement according to data accessment. The filename hence encodes additional information.
-  Potentially, we also can generate an \texttt{esdm.conf} file to reflect the specific hardware we have available to run the workflow and employ ESDM to perform the I/O.
+  Typically, to create a filename, the script calls Cylc commands with a template provided by the user and feeds this information to the application.
+  This ultimately defines the storage location to be used.
+  A script typically consist of multiple fine-grained commands and may even call multiple parallel applications.
 
-  \item \textbf{Application}\ \ The user-specified application runs taking the filenames as instructed. The application may use NetCDF or XIOS to perform the I/O.
+  The way the filenames are generated is now different; we will now use a replacement command that invokes a tool of EIOS to generate a pseudo filename.
+  This filename will encode additional information for ESDM about how to prioritise data placement according to data access.
+  Potentially, we also can generate an \texttt{esdm.conf} file to reflect the specific hardware we have available to run the specific application.
 
-  \textbf{Application + I/O Vision}\ \ If the \texttt{esdm.conf} file is generated in the last stage, now the application can also use ESDM to perform the I/O. Knowing the potential targets, ESDM loads the system configuration to schedule application-local I/O. The application uses ESDM with the script filename, ESDM extracts the long-term schedule information and considers it during I/O scheduling to exploit the data locality. A data management service may run and purge or migrate data according to \sout{{\color{blue}{user-specifications}}} {\color{cyan}{user or ESDM specifications}} of the information life cycle.
+  \item \textbf{Application}\ \ The user-specified parallel application runs.
+  The application may either use NetCDF with ESDM support or ESDM directly to access data sets.
+  Hence, in \Cref{fig:layers}, the HDF5 layer is replaced with ESDM.
+  ESDM loads the \texttt{esdm.conf} file that contains the information about the available storage backends to use and their configuration.
+  Knowing the potential targets, ESDM schedules application-local I/O.
+  ESDM extracts the long-term schedule information from the generated filenames and considers it during I/O scheduling to exploit the data locality between tasks.
+
 
 \end{enumerate}
+
+
 
 \section{Conclusions}
 \label{sec:conclusions}
