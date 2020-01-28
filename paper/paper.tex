@@ -204,12 +204,12 @@ These are just examples and currently the scientists perform such kind of optimi
 
 \begin{figure}[tb]
   \centering
-  \begin{subfigure}{.49\textwidth}
-  \includegraphics[width=\columnwidth]{lifecycle-1}
+  \begin{subfigure}{.45\textwidth}
+  \includegraphics[width=0.9\columnwidth]{lifecycle-1}
   \caption{Local and work}
   \end{subfigure}
-  \begin{subfigure}{.49\textwidth}
-  \includegraphics[width=\columnwidth]{lifecycle-2}
+  \begin{subfigure}{.45\textwidth}
+  \includegraphics[width=0.9\columnwidth]{lifecycle-2}
   \caption{Scratch only}
   \end{subfigure}
 
@@ -263,11 +263,11 @@ From the user perspective, a general workflow can be described by three categori
 \centering
 \begin{tabular}{|m{2cm}|m{5.5cm}|m{3.5cm}|m{3.5cm}|}
 \hline
-& \parbox{5.5cm}{\centering \textbf{Input}} & \parbox{3.5cm}{\centering \textbf{Tasks}} & \parbox{3.5cm}{\centering \textbf{Products}} \\ \hline \hline
+& \parbox{5.5cm}{\centering \textbf{Input}} & \parbox{3.5cm}{\centering \textbf{Computing}} & \parbox{3.5cm}{\centering \textbf{Products}} \\ \hline \hline
 
-Description & Information inserted in the workflow. & The tasks specified by the user. & Possible outcomes of the tasks. \\ \hline
+Description & Information inserted in the workflow. & Tasks specified by the user. & Possible outcomes of the tasks. \\ \hline
 
-File & \texttt{input.ds} & \texttt{tasks.ds} & \texttt{output.ds} \\ \hline
+File & \texttt{input.ds} & \texttt{computing.ds} & \texttt{product.ds} \\ \hline
 
 Composed of & Datasets/Scripts & Datasets/Scripts & Datasets \\ \hline
 
@@ -439,7 +439,7 @@ Figure \ref{fig:stages} illustrates the stages of a workflow being processed by 
 
   \textbf{Task + I/O Vision}\ \ The optimisation defined in the previous stage are implemented. For instance, if migrations have to be performed before or after a job is run, \sout{{\color{cyan}{it}}} {\color{cyan}{Slurm}} will administer them.
 
-  \item \textbf{Script}\ \ The shell-script executes the users-provided instructions allowing Cylc to generate its internal variables. To create the filenames, Cylc reads templates provided by the user that defines the storage location to be used.
+  \item \textbf{Script}\ \ The shell script executes the users-provided instructions allowing Cylc to generate its internal variables. To create the filenames, Cylc reads templates provided by the user that defines the storage location to be used.
 
   \textbf{Script + I/O Vision}\ \ The way the filenames are generated are now slightly different. We will use a new command that invokes ESWIOSchedule again {\color{cyan}{Slurm is calling ESWIOSchedule?}} to read the suite files and generate information for ESDM about where to prioritise {\color{cyan}{prioritise ==> Is this the right word here?}} data placement according to data accessment. The filename hence encodes additional information.
   Potentially, we also can generate an \texttt{esdm.conf} file to reflect the specific hardware we have available to run the workflow and employ ESDM to perform the I/O.
@@ -501,8 +501,8 @@ The current HPC environment faces several challenges and limitations concerning 
 \begin{description}
 \item[Explicit Workflows]
 
-Typically, as part of shell scripts, users explicitly encode data processing workflows as a sequence of steps consisting of input, computing, and output.
-The computing-intense parts (jobs) and their dependencies are managed by a cluster resource manager that dispatches them.
+Typically, as part of shell scripts, users explicitly encode data processing workflows as a sequence of steps consisting of input, computing, and \sout{{\color{blue}{output}}} {\color{cyan}{products}}.
+The computing-intense parts ({\color{blue}{jobs}} {\color{cyan}{tasks?}}) and their dependencies are administrated by a cluster resource manager that dispatches them.
 These loosely coupled workflows require that intermediate results are stored on persistent storage to be used by the next task.
 Data transfer, however, needs a dominant fraction of energy compared to computation favouring offloading of computation to storage.
 
@@ -510,26 +510,27 @@ Data transfer, however, needs a dominant fraction of energy compared to computat
 
 Organising the data placement on storage tiers is typically performed manually by the developer/user or via policies, leading to suboptimal optimisations. On top of that, it is a tedious and error-prone task.
 
-Manual tiering requires the user or application to control the data placement, i.e., storing data (typically in the form of files) on a particular storage system and, usually, moving data between storage by using scripts.
-One limitation here is that decisions about how data structures are mapped and packaged into files are made once by the producing application, and cannot be changed without manual intervention by a downstream application.
+Manual tiering requires the user or application to control the data placement, i.e., storing data (typically in the form of \sout{{\color{blue}{files}}} {\color{cyan}{datasets}}) on a particular storage system and, usually, moving data between storage by using scripts.
+One limitation here is that decisions about how data structures are mapped and packaged into \sout{{\color{blue}{files}}} {\color{cyan}{datasets}}) are made once by the producing application, and cannot be changed without manual intervention by a downstream application.
 
 A policy system (e.g. burst buffer) aims to simplify the data movement for the user, but typically migrates objects in the coarse granularity of files.
 However, the semantical information that can be used by a policy system to make decisions is limited, e.g., data location, file extension, age of the file, etc.
 
 Any hard-coded decision has significant implications for the performance of both applications and systems because the optimal choices about file size and content may be very different for the data production and any subsequent data analysis phase.
-In any case, data migration needs resources from the source and the target storage system to copy data.
-Thus, to avoid extra manual work and decisions, it is preferable to direct data to locations where it can be stored and directly used by subsequent workflows -- at best, coupling the data source producing data with a data consumer to prevent storing intermediate products on persistent storage.
+In any case, data migration needs resources from the source {\color{cyan}{source? the machine?}} and the target storage system to copy data.
+Thus, to avoid extra manual work and decisions, it is preferable to direct data to locations where it can be stored and directly used by subsequent workflows -- at best, coupling \sout{{\color{blue}{the data source producing data with a data consumer}}} {\color{cyan}{the data source with the data consumer}}) to prevent storing intermediate products on persistent storage.
 
 \item[Task and Data Equality]
 
 All tasks and data products are handled identically by a HPC system, meaning there is no differentiation between individual jobs and data products.
 This lack of hierarchy is problematic, as different use cases may not only differ in priority and deadline, but the computing speed usually depends on the critical path of the execution.
 
-This problem is even more severe for data products: a storage system provides a single level of performance and resilience and performance for stored files.
+This problem is even more severe for data products: a storage system provides a single level of performance and resilience \sout{{\color{blue}{and performance}}} for stored files.
+\sout{{\color{blue}{files}}} {\color{cyan}{datasets}})
 Theoretically, different fault-tolerance and performance policies can be realised with varying storage systems and using management policies.
 However, these policies would be coarse-grained and would not account for the priority of the workflow and, most importantly, the value of data.
 The importance of data depends on aspects like costs to reproduce the data (can it be reproduced easily), the type of the experiment (test run, production run) and runtime constraints for the overall and potential crucial workflow.
-While value and priority should influence fault-tolerance strategies and imply the quality of service for performance and availability, in practice, this is not the case as the storage just sees blocks and files.
+While value and priority should influence fault-tolerance strategies and imply the quality of service for performance and availability, in practice, this is not the case as the storage just sees blocks and files. {\color{cyan}{I don't think we will be dealing with that in the next 10 years!}}
 
 \item[Manual Optimisation]
 
@@ -641,7 +642,7 @@ Now.
 
   \item \textbf{Task}\ \ Once the task is ready to be dispatched by Slurm, it is started on the supercomputer.
 
-  \item \textbf{Script}\ \ The shell-script executes the users-provided instructions allowing Cylc to generate its internal variables. To create the filenames, Cylc reads templates provided by the user that defines the storage location to be used.
+  \item \textbf{Script}\ \ The shell script executes the users-provided instructions allowing Cylc to generate its internal variables. To create the filenames, Cylc reads templates provided by the user that defines the storage location to be used.
 
   \item \textbf{Application}\ \ The user-specified application runs taking the filenames as instructed. The application may use NetCDF or XIOS to perform the I/O.
 
