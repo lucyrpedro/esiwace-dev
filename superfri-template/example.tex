@@ -1,0 +1,114 @@
+%% An example of the article based on superfri.cls class file of
+%% ``Supercomputing Frontiers and Innovations. An International Journal''
+%% http://superfri.org/.
+
+\documentclass{superfri}
+\usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
+
+% ------------
+\bibliographystyle{superfri}
+
+\begin{document}
+
+\author{Alice~M.~Scientist\footnote{\label{susu}South Ural State University, Chelyabinsk, Russian Federation}$^{,2}$\orcidID{0000-1111-2222-3333} \and  Bob~A.~Scientist\footnoteref{susu} \and Derek~R.~Author\footnote{\label{msu}Lomonosov Moscow State University, Moscow, Russian Federation}\orcidID{1111-2222-3333-4444}
+}
+
+\title{SuperFrI Article Template\thanks{The paper is recommended for publication by the Program Committee of the International Scientific Conference ``Parallel computational technologies (PCT) 2018''.}}
+
+\maketitle{}
+
+\begin{abstract}%
+This template is devoted to helping you format your article the proper way in
+\LaTeX.
+
+\keywords{superfri, template, article formatting}
+\end{abstract}
+
+% -----------------------------------------------------------------------
+\section*{Introduction}
+\label{sec:intro}
+The template demonstrates~\cite{DBLP:conf/ics/2015} how to use the \emph{superfri} class. It could be
+used as a basis~\cite{DBLP:conf/iccS/AltintasNLKDS16} for your article and meets all the formatting requirements of
+the SuperFri journal. Consult the author
+guidelines for details on that matter.
+
+\section{The Class}
+\label{sec:class}
+
+\subsection{Installation}
+\label{sec:install}
+The class consists of a single file \verb=superfri.cls= which should reside
+along with your manuscript file.
+
+\subsection{Features}
+\label{sec:features}
+The class is based on the standard~\cite{DBLP:books/sp/byeon2010/RiedelSMWL10} article class and supports all of its
+features, as well as these:
+\begin{itemize}
+\item title and author formatting;
+\item abstract and keywords;
+\item theorems, definitions, and proofs.
+\end{itemize}
+
+Begin your paper~\cite{DBLP:series/cogtech/354089408} with the title and authors' names. After filling the
+necessary info in with \verb=\title= and \verb=\author= commands put it all
+together~\cite{SIV2008} using the \verb=\maketitle= command.
+
+Define the structure of your article using up to three levels of nesting with
+the \verb=\section=, \verb=\subsection=, and \verb=\subsubsection= commands.
+You can use the environments \verb=theorem=, \verb=proof=, \verb=lemma=, etc.
+
+For further directions read the comments in \verb=superfri.cls= as a manual~\cite{DBLP:journals/pcs/SokolinskyS16}.
+
+\subsubsection{Subsubsection title}
+
+The equations look like
+\begin{equation}
+a^2 + b^2 = c^2 + \int_1^2 x+y \, \mathrm{d}y,
+\end{equation}
+where $2$ is a number.
+
+An example of a simple figure~\cite{DBLP:journals/corr/Zhang16b} is shown in~\figref{pic/pic}, while a table
+is in~\tabref{tab-mytable}.
+
+\fig{width=5cm}{pic/pic}{An example of a simple figure}
+
+Figure~\ref{fig:fig} demonstrates formatting of a complex figure.
+
+\begin{figure}[!ht]
+	\begin{minipage}{.5\linewidth}
+		\centering
+		\includegraphics[width=0.65\linewidth]{pic/pic}
+		\subcaption{This is subcaption for A subfigure}\label{subfig:a}
+	\end{minipage}
+	\begin{minipage}{.5\linewidth}
+		\centering
+		\includegraphics[width=0.65\linewidth]{pic/pic}
+		\subcaption{This is subcaption for B subfigure}\label{subfig:b}
+	\end{minipage}
+	\vspace{3pt}
+	\caption{An example of a complex figure}
+	\label{fig:fig}
+\end{figure}
+
+
+\tab{tab-mytable}{An example of a table}{
+	\begin{tabular}{rcl}
+	\hline
+	one & two & three \\
+	\hline
+	a & b & c \\
+	$\alpha$ & $\beta$ & $\gamma$ \\
+	$x$ & $y$ & $z$ \\
+	\hline
+	\end{tabular}
+}
+
+\section*{Acknowledgements}
+Put the acknowledgements after the last section, like this.
+
+\openaccess
+
+\bibliography{example}
+\end{document}
