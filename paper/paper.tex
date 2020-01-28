@@ -218,10 +218,19 @@ Decisions about storage must take into consideration the architecture in which t
 The developers make the configuration about parallelism and where the data is stored in a script file that is executed for each specific task.
 
 \subsection{Data Management}
+\label{sec:datamanagement}
 
 The scripts for the tasks in Cylc define how the data is stored on the available storage systems.
-\Cref{fig:lifecycle} shows three possible life cycles and the access pattern for a specific dataset.
 Consider that the machine has three file systems: a fast \textbf{scratch} file system on which data may reside only for a week, a slower \textbf{work} file system, and each node has a \textbf{local} file system.
+
+What happens in many current workflows is that they use only \textbf{work} and \textbf{scratch}.
+When a task is set to computing, the corresponding dataset is moved to \textbf{scratch}, processed, and the resulting datasets are transferred back to \textbf{work}.
+If the \textbf{scratch} filesystem achieves its capacity, then the datasets move back to \textbf{work} and keep running the task until it is finished.
+If the I/O planning is made a priori, this situation can be avoided.
+In addition to the file systems described, many supercomputers also have available for the user \textbf{scratch2} file systems (sometimes local and global).
+Therefore, in a real scenario, if the architecture of the machine is known, we can better utilize its resources.
+
+\Cref{fig:lifecycle} shows three possible life cycles and the access pattern for a specific dataset.
 As shown in \Cref{fig:lifecycle}(a), the dataset could be stored on the \textbf{local} storage first to avoid congestion on the \textbf{work} file system, then be migrated to \textbf{work} file system where subsequent tasks of the workflow may read it multiple times.
 In the end, this dataset might be an intermediate product that can then be deleted.
 Alternatively (\Cref{fig:lifecycle}(b)), it could be stored on the \textbf{scratch} file system immediately and accessed there.
@@ -230,7 +239,6 @@ The last scenario (\Cref{fig:lifecycle}(c)) presents the case where data is crea
 However, it would require that the subsequent tasks are placed on the same machine where data is now stored.
 The scientist responsible for the workflow must optimise the available resources intuitively.
 These are just examples and currently the scientists perform such kind of optimisations manually.
-
 
 \begin{figure}[tb]
   \centering
@@ -270,8 +278,13 @@ However, nowadays, to be able to run a job in a HPC environment efficiently, res
 We propose an approach to reduce the burden on researchers and, at the same time, optimise the decisions about jobs running in HPC systems.
 Once we have an automated decision about where the job will run and how the storage will be managed, scientists can then run their workflows in any machine without further interactions and even without previous knowledge about the machine architecture.
 
+Our vision requires two additional information: firstly, the user must augment the workflow description with information about IO requirements and explicitly annotate dependencies to data sets; secondly, the data center (or expert user) must provide a description of the storage architecture and characteristics for each storage system.
 
-\subsection{Workflow Description}
+There are many approaches to implement the technology for this vision, it is apparent that changes need to be made to several software components to realize this vision.
+In the next section, we will discuss the specific design for our transitional roadmap for climate and weather.
+
+
+\subsection{Extended Workflow Description}
 
 So far, Cylc allowed specifying tasks and the dependencies among them.
 We aim to enrich this information with characteristics for input, and output, i.e., the datasets used.
@@ -283,14 +296,80 @@ This last step represents the typical uncertainty of data reuse, i.e., it is unc
 In this approach, each task is annotated with the required inputs and the generated products.
 Each data product is annotated with metadata such as data life cycle information, e.g., the value of data and how long should it be kept.
 
+Indeed, by monitoring I/O accesses we can automatically draft such IO descriptions on behalf of the user to simplify the specification.
+All we need is to run one cycle of the specific workflow, considering that a workflow cycle is executed many times in climate and weather, this is a cheap approach.
+From the recorded IO accesses, we analyze the IO patterns and dependencies associated with it to generate the configuration file.
+
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.4\columnwidth]{workflow}
-  \caption{Example of a high-level workflow}
+  \caption{Example of a high-level workflow with tasks and data dependencies}
   \label{fig:workflow}
 \end{figure}
 
-\subsection{User Perspective Workflow}
+\subsection{System Information}
+
+The system information shall comprise of all available storage systems, the system topology, and the characteristics of each of the involved components.
+This may include simplified or complex models for the component to approximate performance for specific I/O patterns allowing to predict performance behavior.
+It is expected that the data center (or expert users) can create such a configuration file, for instance, by using vendor provided information or by executing benchmarks.
+
+\subsection{Smarter IO Scheduling}
+
+With this separation of concerns, we can abstract from the workflow what is essential and what a machine should optimise to ensure that the resources available are being used smartly.
+In this paper, we focus on utilizing a heterogeneous storage environment instead of exhaustively discussing the potential that is unleashed with the right level of abstraction in place by researchers that exploit the available opportunities.
+Every time parameters are manually tuned right now is room from improvement by using automatised decision making.
+And Machine Learning has been proven effective in replacing human-beings and adapt the workflow dynamically in case of unexpected situations (the system is down, nodes are unresponsive, etc.).
+
+Optimisations we discuss in this paper are related to the life cycle of datasets and the placement of such datasets into specific storage according to system performance characteristics and the workflow specification.
+Firstly, the IO scheduler could make the placement decision for the individual data sets and manage their relocation during the life cycle as discussed in \Cref{sec:datamanagement}.
+
+Consider the theoretical case to have just two tasks A and B that need to be repeated many times:
+Datasets generated by Task\,\textbf{A} are used by Task\,\textbf{B} and hence both tasks must have access to the same data in the system.
+Because there is one script responsible for setting the configuration, the decision in which directory to store data is somewhat fixed.
+Such configuration was done manually and with restricted information about the storage and system architecture.
+It would be interesting to explore storage options for the datasets and, e.g., have different cycles stored placed in different storage systems.
+If the lifetime of such dataset is, for instance, two cycles, alternate the datasets into two scratch file systems is something that would be a simple job an I/O-aware scheduler.
+However, manually, that implies at having at least two scripts\footnote{Complicated scripts would have allowed to change the storage type depending on the cycle but it is big burden to the user.} for each task with information about the different storage.
+
+Figure \ref{fig:cycle-4} exemplifies a restriction of our example climate/weather workflow the way it was being generated.
+Assume you have, for instance, four cycles of the model running with all the required post-processing steps.
+Typically, the user has generated the scripts for each task by generating a filename using the same prefix that is then placed at the same storage type every time.
+That happens because all datasets generated by Task \textbf{model} will be used by Task \textbf{post\,prod}, so they should stay on the same node.
+
+
+The user-specific storage locations are a viable option to run a workflow.
+The user might even have analysed various scenarios such as depicted in
+\Cref{sec:datamanagement}.
+However, by automating these tasks, we provide a smarter route taking into consideration the architecture available and the way the datasets are stored during the intermediate steps of the workflow.
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\columnwidth]{cycle-4}
+  \caption{Four stages workflow example}
+  \label{fig:cycle-4}
+\end{figure}
+
+
+\subsection{Benefit}
+
+Once we have the complete knowledge about how the workflow is expected to run, we can optimise steps that were before predefined by the user usually considering only options for feasibility.
+
+\begin{itemize}
+\item Abstraction: The user does not have to worry about the architecture that the workflow will run, removing the specialist from the decision-making process.
+
+\item Optimization: The workflow will be optimised for the specific available system characteristics considering potentially even runtime characteristics.
+This will increase performance and system utilization.
+
+\item Performance-portability: The user has to specify the IO requirements only once for the tasks of the workflow.
+The workflow can now be run on any system without user intervention.
+Even more, if the system characteristics change, e.g.. it gets upgraded and an additional storage tier becomes available or if storage degrades, the I/O-aware workflow could automatically adapt and make use of this new environment.
+\end{itemize}
+
+
+
+
+\section{Specification of the Workflow from User Perspective}
 
 From the user perspective, a general workflow can be described by three categories described in Table \ref{tab:workflow}.
 
@@ -346,17 +425,6 @@ Thinking what about I/O, no decision is being made about an optimal way to store
 Consider, as an example, that the datasets from \texttt{product1.ds} (the final product of task 1) are divided into \texttt{product1-final.ds} and \texttt{product1-task2.ds}. Then, it is clear that \texttt{product1-task2.ds} will be required to run Task\,2, and, because of that, should be put in fast storage to quickly being retrieved, or even kept in local storage. The \texttt{product1-final.ds} dataset, however, can go directly to tape, if the lifetime of the final output has to be stored for a long time, but no access is required from the current workflow.
 The bottom line here is: several options can be optimised if we know the whole workflow in advance.
 
-\subsection{Potential Benefit}
-
-Those simple examples are here to demonstrate that, once we have the complete knowledge about how the workflow is expected to run, we can optimise steps that were before predefined by the user usually considering only options for feasibility. The user input is one of the viable options to run the workflow, but probably it is not the best, assuming other options are available. The user might even have analysed other options, but s/he has naively done that (usually by trial and error). By automating these tasks, specifically a smarter route for the tasks taking into consideration the architecture available and the way the datasets are stored during the intermediate steps of the workflow, we have a twofold gain:
-
-\begin{itemize}
-
-\item The user does not have to worry about the architecture that the workflow will use, removing from the specialist the decision-making process; and
-
-\item The workflow will be optimised for the specific workflow without extra input from the user and the resources will, then, be better utilised.
-
-\end{itemize}
 
 \section{Design}
 What changes now in terms of specification?
@@ -427,22 +495,6 @@ The idea here is to embrace the concept that tasks dependencies are really datas
   \label{fig:cycle-io-dep}
 \end{figure}
 
-Figure \ref{fig:cycle-4} exemplifies another restriction of the way current workflows are being generated. Assume you have, for instance, four cycles of the model you are running. Because the scripts for the workflow consider individual tasks, the datasets generated by them are placed at the same storage type every time. That happens because all datasets generated by Task \textbf{model} will be used by Task \textbf{post\,prod}, so they should stay "closer" when thinking about memory. However, although this decision is based on an optimised concept, it still restricts the way the system deals with the datasets and optimisations that are not made thinking only about the local structure.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.8\columnwidth]{cycle-4}
-  \caption{Four stages workflow example}
-  \label{fig:cycle-4}
-\end{figure}
-
-Datasets generated by Task\,\textbf{A} and used by Task\,\textbf{B} will have the same physical location in the system because there is one fixed script responsible for setting the configuration. Again, such configuration was done manually and with restricted information about the storage and system architecture. It would be interesting to explore the options for the datasets and have them placed in different storage systems. If the lifetime of such dataset is, for instance, two cycles, alternate the datasets into two scratch dataset systems is something that would be a simple job for a tool working on generating filenames and storage. However, manually, that implies at having at least two scripts with information about the different storage and extra work to have better utilisation of the available resources.
-
-The information about the system architecture can be provided in advance as a configuration file, and we can use monitoring to identify the I/O patterns for a specific workflow. For that, all we need is to run one cycle of the workflow and detect the patterns associated with it. For this purpose, we intend to use Machine Learning to identify the patterns and adapt the workflow in case of unexpected situations (the system is down, nodes are unresponsive, etc.).
-With this separation of concepts, we can abstract from the workflow what is essential and has to be provided by the user and what a machine should optimise to ensure that the resources available are being used smartly. Every time parameters are manually tuned, that has a room from improvement by using automatised decision making. And Machine Learning has been proven effective in replacing human-beings in several problems.
-
-Optimisations we can envision about the I/O are related to the life cycle of datasets and the placement of such datasets into specific memory according to their utilisation. What happens in most current workflows is that usually, they use only two types of file systems: \textbf{work} and \textbf{scratch}. When a task is set to computing, the corresponding dataset is moved to \textbf{scratch}, processed, and the resulting datasets are transferred back to \textbf{work}. If the \textbf{scratch} filesystem achieves its capacity, then the datasets move back to \textbf{work} and keep running the task until it is finished. If the I/O planning is made a priori, this situation can be avoided.
-In addition to the file systems described, many supercomputers also have available for the user \textbf{scratch2} fyle systems (sometimes local and global). Therefore, in a real scenario, if the architecture of the machine is known, we can better use its resources.
 
 \subsection{Modified Software Stack}
 
