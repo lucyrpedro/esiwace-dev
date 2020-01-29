@@ -93,8 +93,8 @@ As the complexity of systems increases and alternative storage and computing tec
 In this paper, we show that knowledge about Input/Output of workflow tasks and overall experimental design helps to
 optimise the execution of climate and weather workflows and may increase the performance, throughput and cost-efficiency of the environments, providing an incentive to users and data-centres that cannot be neglected.
 
-The paper is organised as follows:
-In \Cref{sec:workflows}, we provide an overview of the specification of workflows in climate and weather and the involved software stack.
+%The paper is organised as follows:
+%In \Cref{sec:workflows}, we provide an overview of the specification of workflows in climate and weather and the involved software stack.
 
 \jk{TODO}
 
@@ -135,7 +135,7 @@ A typical I/O stack for a single parallel application like a climate model is sh
 \begin{minipage}{0.2\textwidth}
 \begin{figure}[H]
   \includegraphics[width=\textwidth]{layers-xios}
-  \caption{I/O Path for an MPI-Parallel Application}
+  \caption{I/O path for an MPI-parallel application}
   \label{fig:layers}
 \end{figure}
 \end{minipage}
@@ -164,7 +164,7 @@ In the following, each stage of the execution is described further.
 \begin{figure}[H]
   \centering
   \includegraphics[scale=1.4]{stages}
-  \caption{Software Stack and Stages of Execution}
+  \caption{Software stack and stages of execution}
   \label{fig:stages}
 \end{figure}
 
@@ -175,7 +175,7 @@ In the following, each stage of the execution is described further.
   Cylc monitors the progress of the workflow.
   Once a task can be executed (dependencies are fulfilled), Cylc generates a Slurm script on the fly with the required metadata for Slurm that will invoke the user-defined script for that task and runs Slurm to queue the job.
 
-  \item \textbf{Slurm} Schedules the execution of the job considering the scheduling policy of the data centre.
+  \item \textbf{Slurm} Slurm schedules the execution of the job considering the scheduling policy of the data centre.
   Once the job is ready to be dispatched, i.e., resources are available, and the job priority is the highest, it is started on the supercomputer.
 
   \item \textbf{Job} The user-provided script is executed on a single node assigned to the job.
@@ -198,7 +198,7 @@ Cylc is in charge to execute and monitor workflows in which each step is submitt
 
 
 
-Consider the Cylc suite configuration for a toy monthly cycling workflow in \Cref{fig:cylc}.
+Consider the Cylc suite configuration for a toy monthly cycling workflow in \Cref{fig:cylc} \cite{8675433}.
 In this workflow, a warm-cycled atmospheric model (\textbf{model}) simulates the physics from a current state to predict the future after a timestep, for example, after six hours.
 This process is repeated in the model to simulate month and years into the future.
 Once the simulation of any month is computed, the data for this month becomes available and can be analysed.
@@ -209,7 +209,7 @@ Also, consider, in addition, a task \textbf{check} that compares some verificati
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.9\columnwidth]{cylc1}
-  \caption{Example workflow\cite{8675433}}
+  \caption{Example workflow}
   \label{fig:cylc}
 \end{figure}
 
@@ -231,31 +231,29 @@ In addition to the file systems described, many supercomputers also have availab
 Therefore, in a real scenario, if the architecture of the machine is known, we can better utilise its resources.
 
 \Cref{fig:lifecycle} shows three possible life cycles and the access pattern for a specific dataset.
-As shown in \Cref{fig:lifecycle}(a), the dataset could be stored on the \textbf{local} storage first to avoid congestion on the \textbf{work} file system, then be migrated to \textbf{work} file system where subsequent tasks of the workflow may read it multiple times.
+As shown in \Cref{fig:lifecycle1}, the dataset could be stored on the \textbf{local} storage first to avoid congestion on the \textbf{work} file system, then be migrated to \textbf{work} file system where subsequent tasks of the workflow may read it multiple times.
 In the end, this dataset might be an intermediate product that can then be deleted.
-Alternatively (\Cref{fig:lifecycle}(b)), it could be stored on the \textbf{scratch} file system immediately and accessed there.
+Alternatively (\Cref{fig:lifecycle2}, it could be stored on the \textbf{scratch} file system immediately and accessed there.
 However, that would require that the last read access happens before files on \textbf{scratch} are automatically removed.
-The last scenario (\Cref{fig:lifecycle}(c)) presents the case where data is created on \textbf{work} by a task. Still, then it is copied to a \textbf{local} node to allow read accesses of subsequent tasks which might be beneficial for small random accesses.
+The last scenario (\Cref{fig:lifecycle3}) presents the case where data is created on \textbf{work} by a task. Still, then it is copied to a \textbf{local} node to allow read accesses of subsequent tasks which might be beneficial for small random accesses.
 However, it would require that the subsequent tasks are placed on the same machine where data is now stored.
 The scientist responsible for the workflow must optimise the available resources intuitively.
 These are just examples, and currently, the scientists perform such kind of optimisations manually.
 
 \begin{figure}[H]
   \centering
-  \begin{subfigure}{.45\textwidth}
+  \begin{subfigure}{.3\textwidth}
   \includegraphics[width=0.9\columnwidth]{lifecycle-1}
-  \caption{Local and work}
+  \caption{\label{fig:lifecycle1} Local and work file systems}
   \end{subfigure}
-  \begin{subfigure}{.45\textwidth}
+  \begin{subfigure}{.3\textwidth}
   \includegraphics[width=0.9\columnwidth]{lifecycle-2}
-  \caption{Scratch only}
+  \caption{\label{fig:lifecycle2} Scratch file system only}
   \end{subfigure}
-
-  \begin{subfigure}{.45\textwidth}
+  \begin{subfigure}{.3\textwidth}
   \includegraphics[width=0.9\columnwidth]{lifecycle-3}
-  \caption{Local and work}
+  \caption{\label{fig:lifecycle3} Local and work file systems}
   \end{subfigure}
-
   \caption{Alternative life cycles for mapping a dataset to storage and the operations: \textbf{C}reate, \textbf{M}igrate, \textbf{R}ead, and \textbf{D}elete}
   \label{fig:lifecycle}
 \end{figure}
@@ -306,6 +304,8 @@ Most of the workflow can run automatically, except for the manual quality contro
 This last step represents the typical uncertainty of data reuse, i.e., it is unclear how Product\,3 will be used further.
 In this approach, each task is annotated with the required inputs and the generated products.
 Each data product is annotated with metadata such as data life cycle information, e.g., the value of data and how long should it be kept.
+
+\lr{This next paragraph should be migrate to 4.3 and again mentioned in 5.3.}
 
 Indeed, by monitoring I/O accesses, we can automatically draft such I/O descriptions on behalf of the user to simplify the specification.
 All we need is to run one cycle of the specific workflow, considering that a workflow cycle is executed many times in climate and weather; this is a cheap approach.
@@ -386,51 +386,73 @@ Even more, if the system characteristics change, e.g., it gets upgraded, and an 
 
 \section{Design}
 
-This section describes our approach to incrementally extend the current software stack for climate and weather workflows that realises parts our vision.
-
+This section describes our approach to incrementally extend the current software stack for climate and weather workflows which realises parts of our vision.
 To automatically make scheduling decisions, the software stack needs to:
+
 \begin{enumerate}
-\item delivers information about information life cycle together with the workflow, and
-\item adapts the resulting workflow, individual script and application execution to consider the automatic I/O schedule.
+
+\item Delivers information about storage life cycle together with the workflow, and
+
+\item Adapts the resulting workflow, individual scripts and application executions to consider the automatic I/O schedule.
+
 \end{enumerate}
 
-\subsection{Transiting to Data Dependencies}
+\subsection{Agregatting Data Dependencies}
 
-\Cref{fig:cycle1} introduces one cycle of the suite in \Cref{fig:cylc} with a simplified notation. The arrows represent the tasks dependencies, but there is no information about the data that are generated. Tasks \textbf{verification} and \textbf{post\,proc} depend on Task \textbf{model}, but does Task \textbf{model} needs to be fully completed to satisfy the dependency?
-Of course, once Task \textbf{model} is completed, the dependent tasks can be executed, and that is the type of information Cylc has to create and reproduce the workflow.
+\Cref{fig:cycle1} introduces one cycle of the suite in \Cref{fig:cylc} with a simplified notation. The arrows represent the tasks dependencies, but there is no information about the data that are generated. Tasks \textbf{verification} and \textbf{post\,proc} depend on Task \textbf{model}, but does Task \textbf{model} needs to be fully completed to satisfy the dependencies?
+Of course, once Task \textbf{model} is completed, the dependent tasks can be executed, and that is the type of information Cylc has to create to reproduce the workflow.
+
+\begin{comment}
+
+\begin{figure}[H]
+\centering
+\begin{tabular}{ccc}
+\includegraphics[scale=0.6]{cycle1} & \qquad &
+\includegraphics[scale=0.6]{cycle-io-dep} \\
+(a) Original Cycle & & (b) Cycle including datasets and dependencies
+\end{tabular}
+\caption{ \label{fig:cycle} Simplified Cylc workflow for the first cycle}
+\end{figure}
+
+\end{comment}
 
 \begin{figure}[H]
   \begin{subfigure}{0.45\textwidth}
     \centering
     \includegraphics[width=\columnwidth]{cycle1}
-    \caption{Original}
+    \caption{Original Cycle}
     \label{fig:cycle1}
   \end{subfigure}
   \qquad
   \begin{subfigure}{0.45\textwidth}
     \centering
     \includegraphics[width=\columnwidth]{cycle-io-dep}
-    \caption{Including datasets and dependencies}
+    \caption{Cycle including datasets and dependencies}
     \label{fig:cycle-io-dep}
   \end{subfigure}
-
-  \caption{Simplified Cylc Workflow for the first stage}
+  \caption{Simplified Cylc workflow for the first cycle}
 \end{figure}
 
-The scenario presented in \Cref{fig:cycle-io-dep} shows the same cycle of \Cref{fig:cycle1}, but  extended information about datasets is added.
+The scenario presented in \Cref{fig:cycle1} shows the same cycle of \Cref{fig:cycle-io-dep}, but  extended information about datasets is added.
 In this picture, we have the tasks dependencies, and we explicitly list the datasets dependencies regarding the tasks that generated them.
 The way data moves through tasks is by creating datasets to pass on the information, including filename and storage destination.
 The datasets produced by every task are coded in the workflow scripts before Cylc evaluation, and it is just replicated by this tool. The tasks can create a different number of datasets, and these datasets may be necessary for the immediate next task in the current cycle, or tasks in different cycles.
 
-Datasets colours indicate which task will use their information and datasets in yellow represent information that will be used in a different cycle. The tricky part when we consider only tasks and not the datasets in the workflow is that it may lead to the false impression that the tasks only depend on the immediately previous one. Note, for instance, that one dataset produced by Task \textbf{model} is later used in Task \textbf{prod\,gen}. That is not an immediate conclusion when we analyse just the arrows for the dependencies. It is clear that Task \textbf{model} is a dependency for Task \textbf{post\,prod}, which is then a dependency for Task \textbf{prod\,gen}. Still, the crucial information here is that any dataset currently being used in the current cycle can also be used later. From the figure we can also see that Task \textbf{model} will generate one dataset for Task \textbf{post\,proc}, one dataset for Task \textbf{prod\,gen}, two datasets for Task \textbf{verification}, and three datasets for a later cycle.
+Datasets colours indicate which task will use their information and datasets in yellow represent information that will be used in a different cycle. The tricky part when we consider only tasks and not the datasets in the workflow is that it may lead to the false impression that one task depends only on the immediately previous one. Note, for instance, that one dataset produced by Task \textbf{model} is later used in Task \textbf{prod\,gen}. That is not an immediate conclusion when we analyse just the arrows for the dependencies. It is clear that Task \textbf{model} is a dependency for Task \textbf{post\,prod}, which is then a dependency for Task \textbf{prod\,gen}. Still, the crucial information here is that any dataset currently being used in the current cycle can also be used later. From the diagram we can also notice that Task \textbf{model} will generate one dataset for Task \textbf{post\,proc}, one dataset for Task \textbf{prod\,gen}, two datasets for Task \textbf{verification}, and three datasets for later cycles.
 The access to this information before the process starts can be used to optimise how these datasets will be stored during the workflow. This information today is static and manual, leaving opportunities for automatisation and optimisations open.
-The idea here is to embrace the concept that tasks dependencies are really datasets dependencies. Once we can insert the datasets explicitly in the workflow, it is easier to see that many optimisations regarding storage can be made.
+The idea here is to embrace the concept that tasks dependencies are really imposed by datasets dependencies. Once we can insert the datasets explicitly in the workflow, it is easier to see that many optimisations regarding storage can be made.
+
+\lr{The end of the paragraph is all about motivation...}
+
 
 \subsection{Extended Workflow Description}
 
+The user can make decisions about storage, and the processing of the datasets/tasks. S/he will insert this information as an additional file to the Cylc workflow management.
+In fact, the user is already doing that, but he is doing just to make the workflow feasible. Here, we are thinking about simplifying the information the user is already providing. So, instead of giving the complete workflow to Cylc, we are expecting the user to provide straightforward information, like:
 
-The user can make decisions about storage, and the processing of the datasets/tasks and s/he will insert this information as an additional file to the Cylc workflow management.
-In fact, the user is already doing that, but he is doing that in just one specific way, to make the workflow possible. Here, we are thinking about simplifying the information the user is already providing. So, instead of giving the complete workflow to Cylc, we are expecting the user to provide straightforward information, like:
+\lr{Now this part contradicts the previous part, because it talks about only one dataset per task. I wish we could keep something that high-level, but it might not be possible for the text and, worse, it might not be feasible for us.}
+
+\lr{Checking 4.2, we shoukd have something concrete here. High-level and concrete would be amazing.}
 
 \begin{itemize}
 
@@ -445,63 +467,78 @@ In fact, the user is already doing that, but he is doing that in just one specif
 
 \subsection{System Information}
 
+\lr{Does Cylc have the information about the system? If so, we can just use it. If not, how to get it for our purpose? And how it's done now?}
+
+
 \subsection{Smarter Scheduling}
+
+\lr{It's clear that I was mixing ESDM and EIOS in a very confusing way. :( The main information that should be here is, imho, in the next section. Consider just drop it.}
 
 Now, comes the question. Assuming the information is available, who will be responsible for making the decisions for optimising the storage and the processing tasks? The answer here is simple: the ESDM Scheduler will do it. The ESDM Scheduler can be used in different steps of the process. ESDM has already an interface with NetCDF. Assuming the user can provide extra information in advance, ESDM can interact in the process before the user gives the data to the Cylc tool, using the information to construct an optimised workflow. Once Cylc builds the workflow, ESDM can interact again after the configuration of the scripts for both effective and efficient run of the parallel applications regarding the available storage and architecture.
 
 
 \subsection{Modified Software Stack}
 
-The appropriate software stack involved in executing a workflow with our I/O-aware scheduler is depicted in \Cref{fig:stages-io}.
-In the following, we describe the modifications to the current execution (described in \Cref{fig:stages}) we propose in this vision paper.
-Firstly, the end-user now has to provide an additional file that covers the I/O information for each task; slight changes have to be made to the scripts that are executed; these will be discussed below.
+The proposed I/O-aware scheduler, called here EIOS (ESDM I/O Scheduler), is now introduced.
+\lr{Note that this is the first mention to ESDM in the whole text! I think the E was for ESiWACE, but I think it has to be ESDM.}
+The appropriate software stack involved in executing a workflow with EIOS is depicted in \Cref{fig:stages-io}.
+In the following, we describe the modifications we propose in this vision paper to the current software stack (\Cref{fig:stages}).
+The end-user has now to provide an additional file that covers the I/O information for each task and slight changes (discussed below) have to be made to the scripts that currently are executed.
 
 \begin{figure}[H]
   \centering
   \includegraphics[scale=1.4]{stages-io}
-  \caption{Software Stack and Stages of Execution with our I/O-Aware Scheduler}
+  \caption{Software stack and stages of execution with our I/O-aware scheduler -- EIOS}
   \label{fig:stages-io}
 \end{figure}
 
 
 \begin{enumerate}
-  \item \textbf{Cylc}\ \ Cylc parses the suite file, generate dependencies and defines a schedule for the execution.
-  Now, Cylc calls EIOS to identify potential to optimise the schedule.
-  EIOS may have decided that subsequent jobs shall be placed on the same node or to reorder the execution of some jobs.
-  Also, it may have provided information for conducting data migration.
 
-  \item \textbf{EIOS}\ \
-  Reads information the workflow: the original suite file and the I/O suit file.
-  Acts depending on the stage of execution, i.e., we could be preparing execution in Cylc, or we are already inside a script.
-  It loads the \texttt{esdm.conf} file that contains the information about the available storage technology in the data centre and their characteristics.
-  Provides the information on how to prioritise I/O targets.
+  \item \textbf{Cylc}
+  %Cylc parses the suite file, generate dependencies and defines a schedule for the execution.
+  Now, Cylc calls EIOS to identify potential optimisations in the schedule.
+  EIOS may decide that subsequent jobs shall be placed on the same node or to reorder the execution of some jobs.
+  Also, it may provide information for conducting data migration.
 
-  A data management service may run as a service and purge or migrate data according to user life cycle specification and EIOS information.
+  \item \textbf{EIOS} The proposed system reads the information about the workflow (original and I/O suit files) and acts depending on the stage of the execution. Two options are possible: we could be preparing the execution in Cylc, or we are already inside a script.
+  \lr{It's not clear to me the consequences of having to options in calling EIOS. It seems the next text is just about one of them.}
+  EIOS loads the \texttt{esdm.conf} file that contains information about the available technology in the data centre and it provides the information on how to prioritise I/O targets.
+  A data management plan may run as a service and purge or migrate data according to the user life cycle specification and the novelty information from EIOS.
 
-  \item \textbf{Slurm}\ \ Schedules the execution of the job considering the scheduling policy of the data centre.
-  Cylc may now have added a constraint to place a job on the same nodes as a previous job which is handled by the modified Slurm.
-  Also, if migrations have to be performed before or after a job is run, Slurm will administer them.
 
-  \item \textbf{Job}\ \ The user-provided script is executed on a single node assigned to the job.
+  \item \textbf{Slurm}
+  %Schedules the execution of the job considering the scheduling policy of the data centre.
+  Cylc may now have added a constraint to place a job on the same node as a previous job and that is now handled by a modified Slurm.
+  Also, if migrations have to be performed before or after a job, Slurm will administer them.
 
-  The script has set environment variables containing information about the Cylc execution (e.g., a task in the workflow) and the Slurm job (e.g., number of nodes).
+  \item \textbf{Job}
+  %The user-provided script is executed on a single node assigned to the job.
+  % The script has set environment variables containing information about the Cylc execution (e.g., a task in the workflow) and the Slurm job (e.g., number of nodes).
 
-  \item \textbf{Script}\ \ The shell-script executes the sequence of commands.
+\lr{Any novelty here? It's better say it's not than say nothing.}
 
-  Typically, to create a filename, the script calls Cylc commands with a template provided by the user and feeds this information to the application.
-  This ultimately defines the storage location to be used.
-  A script typically consists of multiple fine-grained commands and may even call multiple parallel applications.
-
-  The way the filenames are generated is now different; we will now use a replacement command that invokes a tool of EIOS to generate a pseudo filename.
+  \item \textbf{Script}
+  %The shell-script executes the sequence of commands.
+  % Typically, to create a filename, the script calls Cylc commands with a template provided by the user and feeds this information to the application.
+  % This ultimately defines the storage location to be used.
+  % A script typically consists of multiple fine-grained commands and may even call multiple parallel applications.
+  The way the filenames are generated is now different. A replacement command invokes EIOS to generate a pseudo filename.
   This filename will encode additional information for ESDM about how to prioritise data placement according to data access.
-  Potentially, we also can generate an \texttt{esdm.conf} file to reflect the specific hardware we have available to run the specific application.
+  Potentially, we can also generate an \texttt{esdm.conf} file to reflect the specific hardware we have available to run the specific application.
 
-  \item \textbf{Application}\ \ The user-specified parallel application runs.
-  The application may either use NetCDF with ESDM support or ESDM directly to access data sets.
+\lr{You already talked about esdm.conf in 2, almost the same information. And 6 will use it, so it has to be available.}
+
+  \item \textbf{Application}
+  %The user-specified parallel application runs.
+  The application may either use NetCDF with ESDM support or ESDM directly to access datasets.
   Hence, in \Cref{fig:layers}, the HDF5 layer is replaced with ESDM.
-  ESDM loads the \texttt{esdm.conf} file that contains the information about the available storage backends to use and their configuration.
-  Knowing the potential targets, ESDM schedules application-local I/O.
-  ESDM extracts the long-term schedule information from the generated filenames and considers it during I/O scheduling to exploit the data locality between tasks.
+  ESDM loads the \texttt{esdm.conf} file that contains the information about the available storage backends and their configuration.
+  % Knowing the potential targets, ESDM schedules application-local I/O.
+  ESDM extracts the long-term schedule information from the generated filenames and considers it during the I/O scheduling to exploit the data locality between tasks.
+
+  \lr{Now I'm not sure I'm comfortable with ESDM being enforced here. Is the replacement mandatory to our model works? I don't think so. It's nice, sure, but it seems tie-in sale, which is not good. Also note that I commented a lost sentence here, that can be used somewhere else.}
+
 \end{enumerate}
 
 
