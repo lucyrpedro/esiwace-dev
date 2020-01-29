@@ -450,34 +450,31 @@ Once we can insert the datasets explicitly in the workflow, it is easier to see 
 
 \subsection{Extended Workflow Description}
 
-The user can make decisions about storage, and the processing of the datasets/tasks. S/he will insert this information as an additional file to the Cylc workflow management.
-In fact, the user is already doing that, but he is doing just to make the workflow feasible. Here, we are thinking about simplifying the information the user is already providing. So, instead of giving the complete workflow to Cylc, we are expecting the user to provide straightforward information, like:
-
-\lr{Now this part contradicts the previous part, because it talks about only one dataset per task. I wish we could keep something that high-level, but it might not be possible for the text and, worse, it might not be feasible for us.}
-
-\lr{Checking 4.2, we shoukd have something concrete here. High-level and concrete would be amazing.}
-
+The user provides information about datasets required for input and the generated output in a separate file similarly to Cylc's suite file.
+This information contains dataset information for each Cylc task:
 \begin{itemize}
-
-\item Task\,1 usually requires ten hours running in a pc with standard configuration\footnote{Intel Core i5, 8 GB RAM, and 500 GB internal storage drive, for instance.}, requires 100 GB of storage that has to be persistent for no more than one week.
-
-\item Task\,2 usually requires two hours running in a pc with standard configuration, requires 150 GB of storage that has to be persistent for no more than two weeks week.
-
-\item Task\,3 usually requires five hours running in a pc with standard configuration, and it does not require extra storage other than the storage for the final results.
-
+  \item name: the name of the field generated/required, this may include a pattern such as supported by Cylc
+  \item size: an estimate of the file size
+  \item lifetime: how long the data must be retained on storage (if at all)
+  \item type: may specify the type of the data, i.e., checkpoint, diagnostics, temporary
 \end{itemize}
+% Expressions will support generic variables such as the number of nodes a job runs...
+
+% \begin{itemize}
+% \item Task\,1 usually requires ten hours running in a pc with standard configuration\footnote{Intel Core i5, 8 GB RAM, and 500 GB internal storage drive, for instance.}, requires 100 GB of storage that has to be persistent for no more than one week.
+% \item Task\,2 usually requires two hours running in a pc with standard configuration, requires 150 GB of storage that has to be persistent for no more than two weeks week.
+% \item Task\,3 usually requires five hours running in a pc with standard configuration, and it does not require extra storage other than the storage for the final results.
+% \end{itemize}
 
 
 \subsection{System Information}
 
-\lr{Does Cylc have the information about the system? If so, we can just use it. If not, how to get it for our purpose? And how it's done now?}
+The information about the system is provided using a configuration file for ESDM.
 
 
 \subsection{Smarter Scheduling}
 
-\lr{It's clear that I was mixing ESDM and EIOS in a very confusing way. :( The main information that should be here is, imho, in the next section. Consider just drop it.}
-
-Now, comes the question. Assuming the information is available, who will be responsible for making the decisions for optimising the storage and the processing tasks? The answer here is simple: the ESDM Scheduler will do it. The ESDM Scheduler can be used in different steps of the process. ESDM has already an interface with NetCDF. Assuming the user can provide extra information in advance, ESDM can interact in the process before the user gives the data to the Cylc tool, using the information to construct an optimised workflow. Once Cylc builds the workflow, ESDM can interact again after the configuration of the scripts for both effective and efficient run of the parallel applications regarding the available storage and architecture.
+The ESDM Scheduler will make the schedule. The ESDM Scheduler can be used in different steps of the process. ESDM has already an interface with NetCDF. Assuming the user can provide extra information in advance, ESDM can interact in the process before the user gives the data to the Cylc tool, using the information to construct an optimised workflow. Once Cylc builds the workflow, ESDM can interact again after the configuration of the scripts for both effective and efficient run of the parallel applications regarding the available storage and architecture.
 
 
 \subsection{Modified Software Stack}
