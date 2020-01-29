@@ -19,7 +19,7 @@
 \usepackage{subcaption}
 
 \newcommand{\jk}[1]{\todo[inline]{JK: #1}}
-\newcommand{\lr}[1]{\todo[inline]{LR: #1}}
+\newcommand{\lr}[1]{\textcolor{blue}{LR: #1}}
 
 \usepackage{multicol}
 \setlength{\columnsep}{1cm}
@@ -151,6 +151,8 @@ Finally, data is stored on a parallel file system like Lustre, which, on the ser
 Different applications involved in a workflow may use a different I/O stack to store their outputs.
 Naturally, the application that inputs previously generated data must use a compatible API to be able to read the specific data format.
 In this figure, for example, XIOS is beneficial for parallel I/O and a process might directly rely on the NetCDF API to read previous data.
+
+Within ESiWACE, we are developing ESDM, ... \jk{TODO}
 \end{minipage}
 
 
@@ -305,9 +307,9 @@ This last step represents the typical uncertainty of data reuse, i.e., it is unc
 In this approach, each task is annotated with the required inputs and the generated products.
 Each data product is annotated with metadata such as data life cycle information, e.g., the value of data and how long should it be kept.
 
-\lr{This next paragraph should be migrate to 4.3 and again mentioned in 5.3.}
+%It was correctly placed here
 
-Indeed, by monitoring I/O accesses, we can automatically draft such I/O descriptions on behalf of the user to simplify the specification.
+By monitoring I/O accesses, we can automatically draft such I/O descriptions on behalf of the user to simplify the specification.
 All we need is to run one cycle of the specific workflow, considering that a workflow cycle is executed many times in climate and weather; this is a cheap approach.
 From the recorded I/O accesses, we analyse the I/O patterns and dependencies associated with it to generate the configuration file.
 
@@ -439,10 +441,11 @@ The way data moves through tasks is by creating datasets to pass on the informat
 The datasets produced by every task are coded in the workflow scripts before Cylc evaluation, and it is just replicated by this tool. The tasks can create a different number of datasets, and these datasets may be necessary for the immediate next task in the current cycle, or tasks in different cycles.
 
 Datasets colours indicate which task will use their information and datasets in yellow represent information that will be used in a different cycle. The tricky part when we consider only tasks and not the datasets in the workflow is that it may lead to the false impression that one task depends only on the immediately previous one. Note, for instance, that one dataset produced by Task \textbf{model} is later used in Task \textbf{prod\,gen}. That is not an immediate conclusion when we analyse just the arrows for the dependencies. It is clear that Task \textbf{model} is a dependency for Task \textbf{post\,prod}, which is then a dependency for Task \textbf{prod\,gen}. Still, the crucial information here is that any dataset currently being used in the current cycle can also be used later. From the diagram we can also notice that Task \textbf{model} will generate one dataset for Task \textbf{post\,proc}, one dataset for Task \textbf{prod\,gen}, two datasets for Task \textbf{verification}, and three datasets for later cycles.
-The access to this information before the process starts can be used to optimise how these datasets will be stored during the workflow. This information today is static and manual, leaving opportunities for automatisation and optimisations open.
-The idea here is to embrace the concept that tasks dependencies are really imposed by datasets dependencies. Once we can insert the datasets explicitly in the workflow, it is easier to see that many optimisations regarding storage can be made.
 
-\lr{The end of the paragraph is all about motivation...}
+The access to this information before the process starts can be used to optimise where compute jobs are executed and how these datasets will be stored during the workflow.
+This information today is static and manual, leaving opportunities for automatisation and optimisations open.
+The idea here is to embrace the concept that tasks dependencies are really imposed by datasets dependencies.
+Once we can insert the datasets explicitly in the workflow, it is easier to see that many optimisations regarding storage can be made.
 
 
 \subsection{Extended Workflow Description}
@@ -480,7 +483,6 @@ Now, comes the question. Assuming the information is available, who will be resp
 \subsection{Modified Software Stack}
 
 The proposed I/O-aware scheduler, called here EIOS (ESDM I/O Scheduler), is now introduced.
-\lr{Note that this is the first mention to ESDM in the whole text! I think the E was for ESiWACE, but I think it has to be ESDM.}
 The appropriate software stack involved in executing a workflow with EIOS is depicted in \Cref{fig:stages-io}.
 In the following, we describe the modifications we propose in this vision paper to the current software stack (\Cref{fig:stages}).
 The end-user has now to provide an additional file that covers the I/O information for each task and slight changes (discussed below) have to be made to the scripts that currently are executed.
@@ -501,10 +503,16 @@ The end-user has now to provide an additional file that covers the I/O informati
   EIOS may decide that subsequent jobs shall be placed on the same node or to reorder the execution of some jobs.
   Also, it may provide information for conducting data migration.
 
-  \item \textbf{EIOS} The proposed system reads the information about the workflow (original and I/O suit files) and acts depending on the stage of the execution. Two options are possible: we could be preparing the execution in Cylc, or we are already inside a script.
-  \lr{It's not clear to me the consequences of having to options in calling EIOS. It seems the next text is just about one of them.}
-  EIOS loads the \texttt{esdm.conf} file that contains information about the available technology in the data centre and it provides the information on how to prioritise I/O targets.
-  A data management plan may run as a service and purge or migrate data according to the user life cycle specification and the novelty information from EIOS.
+  \item \textbf{EIOS}
+  The proposed system reads the information about the workflow (original and I/O suit files) and acts depending on the stage of the execution.
+  EIOS consists of several subcomponents:
+    \begin{itemize}
+      \item The high-level scheduler that interfaces with Cylc.
+      \item A tool that is run inside a script of a specific job/task -- as a replacement to the \texttt{cylc cycle-point} call.
+      It generates pseudo file names that are used by the applications with ESDM support.
+      \item A data management service (not shown on the figure) that purges or migrate data according to the user life cycle specification and the novelty information from EIOS.
+    \end{itemize}
+  EIOS components use the \texttt{esdm.conf} file that contains information about the available technology in the data centre and it provides the information on how to prioritise I/O targets.
 
 
   \item \textbf{Slurm}
@@ -513,10 +521,9 @@ The end-user has now to provide an additional file that covers the I/O informati
   Also, if migrations have to be performed before or after a job, Slurm will administer them.
 
   \item \textbf{Job}
+  A job might be scheduled on the same nodes than a previous job to utilize local storage.
   %The user-provided script is executed on a single node assigned to the job.
   % The script has set environment variables containing information about the Cylc execution (e.g., a task in the workflow) and the Slurm job (e.g., number of nodes).
-
-\lr{Any novelty here? It's better say it's not than say nothing.}
 
   \item \textbf{Script}
   %The shell-script executes the sequence of commands.
@@ -525,9 +532,7 @@ The end-user has now to provide an additional file that covers the I/O informati
   % A script typically consists of multiple fine-grained commands and may even call multiple parallel applications.
   The way the filenames are generated is now different. A replacement command invokes EIOS to generate a pseudo filename.
   This filename will encode additional information for ESDM about how to prioritise data placement according to data access.
-  Potentially, we can also generate an \texttt{esdm.conf} file to reflect the specific hardware we have available to run the specific application.
-
-\lr{You already talked about esdm.conf in 2, almost the same information. And 6 will use it, so it has to be available.}
+  Potentially, EIOS may generate an \texttt{esdm.conf} file for the specific application to adjust the mapping of data to available storage targets.
 
   \item \textbf{Application}
   %The user-specified parallel application runs.
@@ -536,8 +541,6 @@ The end-user has now to provide an additional file that covers the I/O informati
   ESDM loads the \texttt{esdm.conf} file that contains the information about the available storage backends and their configuration.
   % Knowing the potential targets, ESDM schedules application-local I/O.
   ESDM extracts the long-term schedule information from the generated filenames and considers it during the I/O scheduling to exploit the data locality between tasks.
-
-  \lr{Now I'm not sure I'm comfortable with ESDM being enforced here. Is the replacement mandatory to our model works? I don't think so. It's nice, sure, but it seems tie-in sale, which is not good. Also note that I commented a lost sentence here, that can be used somewhere else.}
 
 \end{enumerate}
 
