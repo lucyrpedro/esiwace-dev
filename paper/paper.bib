@@ -1,4 +1,4 @@
-@ARTICLE{8675433,
+@article{8675433,
 author={H. {Oliver} and M. {Shin} and D. {Matthews} and O. {Sanders} and S. {Bartholomew} and A. {Clark} and B. {Fitzpatrick} and R. {van Haren} and R. {Hut} and N. {Drost}},
 journal={Computing in Science Engineering},
 title={Workflow Automation for Cycling Systems},
@@ -15,4 +15,54 @@ month={July},}
   title={File I/O on Intel Xeon Phi Coprocessors: RAM disks, VirtIO, NFS and Lustre},
   author={Andrey E. Vladimirov and V. Karpusenko and Tony Yoo},
   year={2014}
+}
+
+@inproceedings{Jette02slurm:simple,
+    author = {Morris A. Jette and Andy B. Yoo and Mark Grondona},
+    title = {SLURM: Simple Linux Utility for Resource Management},
+    booktitle = {In Lecture Notes in Computer Science: Proceedings of Job Scheduling Strategies for Parallel Processing (JSSPP) 2003},
+    year = {2002},
+    pages = {44--60},
+    publisher = {Springer-Verlag}
+}
+
+@inproceedings{esdm,
+    author = {Bryan N. Lawrence and Julian M. Kunkel and Jonathan Churchill and Neil Massey and Philip Kershaw and Matt Pritchard},
+    title = {Beating Data Bottlenecks in Weather and Climate Science},
+    booktitle = {Extreme Data Workshop -- Forschungszentrum Jülich, Proceedings, IAS series, volume 40},
+    year = {2018},
+    pages = {31--36}
+}
+
+@misc{xios,
+    author = {Yann Meurdesoif and A Caubel and R Lacroix and J D'erouillat and M H Nguyen},
+    title = {XIOS Tutorial},
+    year = {2016},
+    url = {http://forge.ipsl.jussieu.fr/ioserver/raw-attachment/wiki/WikiStart/XIOS-tutorial.pdf}
+}
+
+@MISC{Jenter92netcdf:a,
+    author = {Harry L. Jenter and Richard P. Signell},
+    title = {NetCDF: A Public-Domain-Software Solution to Data-Access Problems for Numerical Modelers},
+    year = {1992}
+}
+
+@inproceedings{BODIAIFSFI19,
+	author	 = {Eugen Betke and Julian Kunkel},
+	title	 = {{Benefit of DDN's IME-Fuse and IME-Lustre File Systems for I/O Intensive HPC Applications}},
+	year	 = {2019},
+	month	 = {01},
+	booktitle	 = {{High Performance Computing: ISC High Performance 2018 International Workshops, Frankfurt/Main, Germany, June 28, 2018, Revised Selected Papers}},
+	editor	 = {Rio Yokota and Michele Weiland and John Shalf and Sadaf Alam},
+	publisher	 = {Springer},
+	series	 = {Lecture Notes in Computer Science},
+	number	 = {11203},
+	pages	 = {131--144},
+	conference	 = {WOPSSS workshop, ISC HPC},
+	organization	 = {ISC Team},
+	location	 = {Frankfurt, Germany},
+	isbn	 = {978-3-030-02465-9},
+	issn	 = {1611-3349},
+	doi	 = {https://doi.org/10.1007/978-3-030-02465-9_9},
+	abstract	 = {Many scientific applications are limited by I/O performance offered by parallel file systems on conventional storage systems. Flash- based burst buffers provide significant better performance than HDD backed storage, but at the expense of capacity. Burst buffers are consid- ered as the next step towards achieving wire-speed of interconnect and providing more predictable low latency I/O, which are the holy grail of storage. A critical evaluation of storage technology is mandatory as there is no long-term experience with performance behavior for particular applica- tions scenarios. The evaluation enables data centers choosing the right products and system architects the integration in HPC architectures. This paper investigates the native performance of DDN-IME, a flash- based burst buffer solution. Then, it takes a closer look at the IME-FUSE file systems, which uses IMEs as burst buffer and a Lustre file system as back-end. Finally, by utilizing a NetCDF benchmark, it estimates the performance benefit for climate applications.},
 }
