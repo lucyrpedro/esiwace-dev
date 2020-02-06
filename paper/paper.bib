@@ -12,7 +12,7 @@ ISSN={1558-366X},
 month={July},}
 
 @inproceedings{Vladimirov2014FileIO,
-  title={File I/O on Intel Xeon Phi Coprocessors: RAM disks, VirtIO, NFS and Lustre},
+  title={{File I/O on Intel Xeon Phi Coprocessors: RAM disks, VirtIO, NFS and Lustre}},
   author={Andrey E. Vladimirov and V. Karpusenko and Tony Yoo},
   year={2014}
 }
@@ -65,4 +65,35 @@ month={July},}
 	issn	 = {1611-3349},
 	doi	 = {https://doi.org/10.1007/978-3-030-02465-9_9},
 	abstract	 = {Many scientific applications are limited by I/O performance offered by parallel file systems on conventional storage systems. Flash- based burst buffers provide significant better performance than HDD backed storage, but at the expense of capacity. Burst buffers are consid- ered as the next step towards achieving wire-speed of interconnect and providing more predictable low latency I/O, which are the holy grail of storage. A critical evaluation of storage technology is mandatory as there is no long-term experience with performance behavior for particular applica- tions scenarios. The evaluation enables data centers choosing the right products and system architects the integration in HPC architectures. This paper investigates the native performance of DDN-IME, a flash- based burst buffer solution. Then, it takes a closer look at the IME-FUSE file systems, which uses IMEs as burst buffer and a Lustre file system as back-end. Finally, by utilizing a NetCDF benchmark, it estimates the performance benefit for climate applications.},
+}
+
+@inproceedings{TUIBIHWLSC19,
+	author	 = {Jakob Lüttgau and Shane Snyder and Philip Carns and Justin M. Wozniak and Julian Kunkel and Thomas Ludwig},
+	title	 = {{Toward Understanding I/O Behavior in HPC Workflows}},
+	year	 = {2019},
+	month	 = {02},
+	booktitle	 = {{IEEE/ACM 3rd International Workshop on Parallel Data Storage \& Data Intensive Scalable Computing Systems (PDSW-DISCS)}},
+	editor	 = {},
+	publisher	 = {IEEE Computer Society},
+	address	 = {Washington, DC, USA},
+	pages	 = {64--75},
+	conference	 = {PDSW-DISCS},
+	location	 = {Dallas, Texas},
+	isbn	 = {978-1-7281-0192-7},
+	doi	 = {https://doi.org/10.1109/PDSW-DISCS.2018.00012},
+	abstract	 = {Scientific discovery increasingly depends on complex workflows consisting of multiple phases and sometimes millions of parallelizable tasks or pipelines. These workflows access storage resources for a variety of purposes, including preprocessing, simulation output, and postprocessing steps. Unfortunately, most workflow models focus on the scheduling and allocation of computational resources for tasks while the impact on storage systems remains a secondary objective and an open research question. I/O performance is not usually accounted for in workflow telemetry reported to users. In this paper, we present an approach to augment the I/O efficiency of the individual tasks of workflows by combining workflow description frameworks with system I/O telemetry data. A conceptual architecture and a prototype implementation for HPC data center deployments are introduced. We also identify and discuss challenges that will need to be addressed by workflow management and monitoring systems for HPC in the future. We demonstrate how real-world applications and workflows could benefit from the approach, and we show how the approach helps communicate performance-tuning guidance to users.},
+}
+
+@article{TDTSOCAFQC17,
+	author	 = {Julian Kunkel and Anastasiia Novikova and Eugen Betke},
+	title	 = {{Towards Decoupling the Selection of Compression Algorithms from Quality Constraints – an Investigation of Lossy Compression Efficiency}},
+	year	 = {2017},
+	month	 = {12},
+	editor	 = {Jack Dongarra and Vladimir Voevodin},
+	journal	 = {Supercomputing Frontiers and Innovations},
+	series	 = {Volume 4, Number 4},
+	pages	 = {17--33},
+	doi	 = {https://doi.org/10.14529/jsfi170402},
+	abstract	 = {Data intense scientific domains use data compression to reduce the storage space needed. Lossless data compression preserves information accurately but lossy data compression can achieve much higher compression rates depending on the tolerable error margins. There are many ways of defining precision and to exploit this knowledge, therefore, the field of lossy compression is subject to active research. From the perspective of a scientist, the qualitative definition about the implied loss of data precision should only matter.With the Scientific Compression Library (SCIL), we are developing a meta-compressor that allows users to define various quantities for acceptable error and expected performance behavior. The library then picks a suitable chain of algorithms yielding the user's requirements, the ongoing work is a preliminary stage for the design of an adaptive selector. This approach is a crucial step towards a scientifically safe use of much-needed lossy data compression, because it disentangles the tasks of determining scientific characteristics of tolerable noise, from the task of determining an optimal compression strategy. Future algorithms can be used without changing application code. In this paper, we evaluate various lossy compression algorithms for compressing different scientific datasets (Isabel, ECHAM6), and focus on the analysis of synthetically created data that serves as blueprint for many observed datasets. We also briefly describe the available quantities of SCIL to define data precision and introduce two efficient compression algorithms for individual data points. This shows that the best algorithm depends on user settings and data properties.},
+	url	 = {http://superfri.org/superfri/article/view/149},
 }
